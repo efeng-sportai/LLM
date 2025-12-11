@@ -1,0 +1,264 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.ENV/
+virtualenv/
+.conda/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Node.js / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Model files and data (common ML/AI artifacts)
+*.h5
+*.hdf5
+*.ckpt
+*.pth
+*.pt
+*.pkl
+*.pickle
+*.joblib
+*.model
+models/
+checkpoints/
+weights/
+data/
+datasets/
+*.csv
+*.parquet
+*.feather
+*.arrow
+
+# Kaggle
+.kaggle/
+kaggle.json
+
+# MongoDB
+*.bson
+mongodb-data/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# IDE - General
+*.sublime-project
+*.sublime-workspace
+*.sublime-window
+.project
+.classpath
+.settings/
+.loadpath
+.externalToolBuilders/
+.buildpath
+.factorypath
+.target
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+
+# OS generated files
+.directory
+.Trash-*
+
+# Coverage reports
+coverage/
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# LLM specific - model downloads and cache
+LLM/models/
+LLM/checkpoints/
+LLM/weights/
+LLM/.cache/
+LLM/data/
+LLM/downloads/
+
+# Scraper specific
+Scraper/.cache/
+Scraper/data/
+Scraper/downloads/
+
+# Frontend specific
+frontend/.expo/
+frontend/.expo-shared/
+frontend/dist/
+frontend/web-build/
+frontend/.next/
+frontend/out/
+
+# General
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*.swo
+*.swp
+*~
+

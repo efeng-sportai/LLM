@@ -1,0 +1,28 @@
+# Core ML/AI Libraries
+keras>=3.0.0
+keras-nlp>=0.3.0
+keras-hub>=0.0.1
+
+# LangChain for vector stores
+langchain-community>=0.0.20
+
+# MongoDB
+pymongo>=4.6.0
+
+# Embeddings
+sentence-transformers>=2.2.0
+
+# FastAPI (for driver.py)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+motor>=3.3.0  # Async MongoDB driver
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Data processing
+numpy>=1.24.0
+
+# Kaggle API (for model downloads)
+kaggle>=1.5.0
+
