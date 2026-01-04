@@ -9,10 +9,12 @@ from datetime import datetime
 from app.services.sports_scraper import SportsScraper
 from app.database import get_training_data_collection
 from app.config import settings
+from app.utils.season_utils import get_smart_season_defaults, SeasonDetector
 import json
 
-# Get current year as default
-CURRENT_YEAR = str(datetime.now().year)
+# Smart season detection
+season_defaults = get_smart_season_defaults()
+CURRENT_YEAR = season_defaults["season"]
 
 class DataPopulator:
     """Service for populating MongoDB with sports data from Sleeper as Training Data"""
@@ -745,11 +747,16 @@ class DataPopulator:
         response += f"Note: Teams are sorted by wins, then by losses (ascending).\n\n"
         
         for i, team_standings in enumerate(sorted_standings, 1):
-            team_info = team_standings.get("team", {})
-            team_name = team_info.get("full_name") or team_info.get("name", "Unknown")
+            # Handle both old and new scraper formats
+            if isinstance(team_standings, str):
+                continue
+                
+            # New scraper format: team is directly in the dict
+            team_name = team_standings.get("team", "Unknown")
             wins = team_standings.get("wins", 0)
             losses = team_standings.get("losses", 0)
             ties = team_standings.get("ties", 0)
+            win_pct = team_standings.get("win_pct", 0)
             
             # Format record
             if ties > 0:
@@ -757,14 +764,15 @@ class DataPopulator:
             else:
                 record = f"{wins}-{losses}"
             
-            # Get additional stats if available
-            stats_str = ""
-            if "pointsFor" in team_standings:
-                stats_str = f" (PF: {team_standings.get('pointsFor', 0)}, PA: {team_standings.get('pointsAgainst', 0)})"
-            elif "points_for" in team_standings:
-                stats_str = f" (PF: {team_standings.get('points_for', 0)}, PA: {team_standings.get('points_against', 0)})"
+            # Add win percentage
+            win_pct_str = f" ({win_pct:.3f})" if win_pct > 0 else ""
             
-            response += f"{i}. {team_name} - {record}{stats_str}\n"
+            # Get conference/division if available
+            conf_div = ""
+            if "conference" in team_standings and "division" in team_standings:
+                conf_div = f" [{team_standings['conference']} {team_standings['division']}]"
+            
+            response += f"{i}. {team_name} - {record}{win_pct_str}{conf_div}\n"
         
         response += f"\nTotal teams: {len(standings)}"
         return response
@@ -1313,8 +1321,11 @@ class DataPopulator:
             
             for ranking_type in ranking_types:
                 try:
-                    # Get team rankings from scraper
-                    rankings = self.scraper.get_nfl_team_rankings(season, season_type, ranking_type)
+                    # Get team rankings from scraper (new scraper expects a list)
+                    rankings_dict = self.scraper.get_nfl_team_rankings(season, season_type, [ranking_type])
+                    
+                    # Extract the specific ranking type from the dict
+                    rankings = rankings_dict.get(ranking_type, [])
                     
                     if not rankings:
                         print(f"   [WARNING] No {ranking_type} rankings found, skipping...")
@@ -1384,49 +1395,36 @@ class DataPopulator:
         response_parts = []
         response_parts.append(f"NFL Team Rankings - {ranking_type.title()} ({season} {season_type})\n\n")
         
-        # Determine the metric to display
-        metric_label = {
-            'offense': 'Total Yards',
-            'defense': 'Yards Allowed',
-            'total': 'Win %'
-        }.get(ranking_type, 'Ranking')
-        
         for i, team in enumerate(rankings, 1):
+            # Handle both old and new scraper formats
+            if isinstance(team, str):
+                # If team is a string, skip it
+                continue
+                
             team_name = team.get('team', 'Unknown')
-            team_abbr = team.get('abbreviation', '')
-            ranking_value = team.get('ranking_value')
-            stats = team.get('stats', {})
+            rank = team.get('rank', i)
             
-            response_parts.append(f"{i}. {team_name} ({team_abbr})")
+            response_parts.append(f"{rank}. {team_name}")
             
-            # Add ranking value
-            if ranking_value is not None:
-                if ranking_type == 'offense':
-                    # For offense, show total yards
-                    if 'total_yards' in stats:
-                        yards = stats['total_yards'].get('display', f"{ranking_value:.0f}")
-                        response_parts.append(f"   {metric_label}: {yards}")
-                    else:
-                        response_parts.append(f"   {metric_label}: {ranking_value:.0f}")
-                elif ranking_type == 'defense':
-                    # For defense, show yards allowed or points against
-                    if 'yards_allowed' in stats or 'yardsAgainst' in stats:
-                        yards_against = stats.get('yards_allowed', stats.get('yardsAgainst', {})).get('display', f"{ranking_value:.0f}")
-                        response_parts.append(f"   {metric_label}: {yards_against}")
-                    else:
-                        response_parts.append(f"   {metric_label}: {ranking_value:.0f}")
-                elif ranking_type == 'total':
-                    # For total, show win percentage or record
-                    if 'win_pct' in stats or 'winPercentage' in stats:
-                        win_pct = stats.get('win_pct', stats.get('winPercentage', {})).get('display', f"{ranking_value:.3f}")
-                        response_parts.append(f"   Win %: {win_pct}")
-                    else:
-                        response_parts.append(f"   Ranking Value: {ranking_value:.3f}")
+            # Add specific stats based on ranking type
+            if ranking_type == 'offense':
+                total_yards = team.get('total_offensive_yards', 0)
+                total_tds = team.get('total_offensive_tds', 0)
+                response_parts.append(f"   Total Yards: {total_yards:,}, TDs: {total_tds}")
+            elif ranking_type == 'defense':
+                def_points = team.get('total_defensive_points', 0)
+                sacks = team.get('total_sacks', 0)
+                ints = team.get('total_int', 0)
+                response_parts.append(f"   Defensive Points: {def_points:.1f}, Sacks: {sacks:.1f}, INTs: {ints}")
+            elif ranking_type == 'total':
+                wins = team.get('wins', 0)
+                losses = team.get('losses', 0)
+                win_pct = team.get('win_pct', 0)
+                response_parts.append(f"   Record: {wins}-{losses}, Win %: {win_pct:.3f}")
             
-            response_parts.append("\n")
+            response_parts.append("")  # Empty line between teams
         
-        response_parts.append(f"\nTotal teams: {len(rankings)}")
-        return "".join(response_parts)
+        return "\n".join(response_parts)
     
     async def get_population_stats(self) -> Dict[str, Any]:
         """Get statistics about populated training data"""

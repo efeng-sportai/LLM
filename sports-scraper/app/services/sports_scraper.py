@@ -1,65 +1,95 @@
 """
-Sports Data Scraper Service
-Facade that delegates to specialized scraper modules
+Sports Scraper Service
+Main service that coordinates all sports data scraping using organized APIs and scrapers
+
+Architecture:
+- APIs: Pure API clients (sleeper_api.py, espn_api.py)
+- Scrapers: Data-specific scrapers that use APIs (nfl_schedule_scraper.py, etc.)
 """
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from .scrapers.sleeper_api import SleeperAPIScraper
-from .scrapers.nfl_schedule import NFLScheduleScraper
-from .scrapers.nfl_rankings import NFLRankingsScraper
-from .scrapers.nfl_news import NFLNewsScraper
-from .scrapers.nfl_standings import NFLStandingsScraper
+from .apis.sleeper_api import SleeperAPI
+from .apis.espn_api import ESPNAPI
+from .scrapers.nfl_schedule_scraper import NFLScheduleScraper
+from .scrapers.nfl_players_scraper import NFLPlayersScraper
+from .scrapers.nfl_standings_scraper import NFLStandingsScraper
+from .scrapers.nfl_rankings_scraper import NFLRankingsScraper
+from .scrapers.nfl_news import NFLNewsScraper  # Keep existing news scraper
+from ..utils.season_utils import get_smart_season_defaults
 
-# Get current year as default
-CURRENT_YEAR = str(datetime.now().year)
+# Smart season detection
+season_defaults = get_smart_season_defaults()
+CURRENT_YEAR = season_defaults["season"]
 
 
 class SportsScraper:
-    """Service for scraping sports data from multiple sources"""
+    """Main sports scraper service using organized APIs and scrapers"""
     
     def __init__(self):
-        # Initialize all scraper modules
-        self.sleeper_api = SleeperAPIScraper()
+        # API clients
+        self.sleeper_api = SleeperAPI()
+        self.espn_api = ESPNAPI()
+        
+        # Specialized scrapers
         self.nfl_schedule = NFLScheduleScraper()
+        self.nfl_players = NFLPlayersScraper()
         self.nfl_standings = NFLStandingsScraper()
-        self.nfl_news = NFLNewsScraper(sleeper_api_scraper=self.sleeper_api)
-        self.nfl_rankings = NFLRankingsScraper(
-            sleeper_api_scraper=self.sleeper_api,
-            standings_scraper=self.nfl_standings
-        )
+        self.nfl_rankings = NFLRankingsScraper()
+        
+        # Keep existing news scraper (uses RSS feeds)
+        self.nfl_news = NFLNewsScraper(sleeper_api=self.sleeper_api)
     
-    # ==================== Sleeper API Methods ====================
+    # ==================== User/League Methods (Sleeper API) ====================
     
     def get_sleeper_user(self, username: str = None, user_id: str = None) -> Dict[str, Any]:
         """Get Sleeper user information"""
-        return self.sleeper_api.get_sleeper_user(username, user_id)
+        try:
+            return self.sleeper_api.get_user(username, user_id)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper user: {str(e)}")
     
     def get_sleeper_leagues(self, user_id: str, season: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get leagues for a Sleeper user"""
-        return self.sleeper_api.get_sleeper_leagues(user_id, season)
+        try:
+            return self.sleeper_api.get_user_leagues(user_id, season)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper leagues: {str(e)}")
     
     def get_sleeper_league(self, league_id: str) -> Dict[str, Any]:
         """Get Sleeper league information"""
-        return self.sleeper_api.get_sleeper_league(league_id)
+        try:
+            return self.sleeper_api.get_league(league_id)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper league: {str(e)}")
     
     def get_sleeper_rosters(self, league_id: str) -> List[Dict[str, Any]]:
         """Get rosters for a Sleeper league"""
-        return self.sleeper_api.get_sleeper_rosters(league_id)
+        try:
+            return self.sleeper_api.get_league_rosters(league_id)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper rosters: {str(e)}")
+    
+    def get_sleeper_matchups(self, league_id: str, week: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get matchups for a Sleeper league"""
+        try:
+            return self.sleeper_api.get_league_matchups(league_id, week)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper matchups: {str(e)}")
+    
+    def get_sleeper_transactions(self, league_id: str, round_num: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get transactions for a Sleeper league"""
+        try:
+            return self.sleeper_api.get_league_transactions(league_id, round_num)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper transactions: {str(e)}")
     
     def get_sleeper_players(self, sport: str = "nfl") -> Dict[str, Any]:
         """Get all players for a sport from Sleeper"""
-        return self.sleeper_api.get_sleeper_players(sport)
-    
-    def get_sleeper_trending_players(
-        self, 
-        sport: str = "nfl", 
-        trend_type: str = "add", 
-        lookback_hours: int = 24, 
-        limit: int = 100
-    ) -> List[Dict[str, Any]]:
-        """Get trending players from Sleeper"""
-        return self.sleeper_api.get_sleeper_trending_players(sport, trend_type, lookback_hours, limit)
+        try:
+            return self.sleeper_api.get_all_players(sport)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper players: {str(e)}")
     
     def get_sleeper_player_stats(
         self,
@@ -70,7 +100,35 @@ class SportsScraper:
         """Get player statistics from Sleeper"""
         if season is None:
             season = CURRENT_YEAR
-        return self.sleeper_api.get_sleeper_player_stats(sport, season, season_type)
+        try:
+            return self.sleeper_api.get_player_stats(sport, season, season_type)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper player stats: {str(e)}")
+    
+    # ==================== NFL Schedule Methods (ESPN API) ====================
+    
+    def get_nfl_schedule(
+        self,
+        season: str = None,
+        season_type: str = "regular",
+        week: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Get NFL schedule using ESPN API"""
+        if season is None:
+            season = CURRENT_YEAR
+        return self.nfl_schedule.get_schedule(season, season_type, week)
+    
+    # ==================== NFL Player Methods (Sleeper API) ====================
+    
+    def get_sleeper_trending_players(
+        self,
+        sport: str = "nfl",
+        trend_type: str = "add",
+        lookback_hours: int = 24,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get trending players using Sleeper API"""
+        return self.nfl_players.get_trending_players(trend_type, lookback_hours, limit)
     
     def get_sleeper_top_players_by_stats(
         self,
@@ -81,24 +139,12 @@ class SportsScraper:
         season: str = None,
         season_type: str = "regular"
     ) -> List[Dict[str, Any]]:
-        """Get top NFL players from Sleeper sorted by statistics"""
+        """Get top players by stats using Sleeper API"""
         if season is None:
             season = CURRENT_YEAR
-        return self.sleeper_api.get_sleeper_top_players_by_stats(
-            sport, position, stat_key, limit, season, season_type
+        return self.nfl_players.get_top_players_by_stats(
+            position, stat_key, limit, season, season_type
         )
-    
-    def get_sleeper_draft(self, draft_id: str) -> Dict[str, Any]:
-        """Get draft information from Sleeper"""
-        return self.sleeper_api.get_sleeper_draft(draft_id)
-    
-    def get_sleeper_matchups(self, league_id: str, week: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Get matchups for a Sleeper league"""
-        return self.sleeper_api.get_sleeper_matchups(league_id, week)
-    
-    def get_sleeper_transactions(self, league_id: str, round_num: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Get transactions for a Sleeper league"""
-        return self.sleeper_api.get_sleeper_transactions(league_id, round_num)
     
     def get_sleeper_injured_players(
         self,
@@ -107,10 +153,10 @@ class SportsScraper:
         status: Optional[str] = None,
         has_team: bool = True
     ) -> List[Dict[str, Any]]:
-        """Get injured/out players from Sleeper"""
-        return self.sleeper_api.get_sleeper_injured_players(sport, injury_status, status, has_team)
+        """Get injured players using Sleeper API"""
+        return self.nfl_players.get_injured_players(injury_status, status, has_team)
     
-    # ==================== NFL Standings Methods ====================
+    # ==================== NFL Standings Methods (Sleeper API) ====================
     
     def get_sleeper_nfl_standings(
         self,
@@ -118,12 +164,25 @@ class SportsScraper:
         season_type: str = "regular",
         grouping: str = "league"
     ) -> List[Dict[str, Any]]:
-        """Get NFL standings from Sleeper webpage"""
+        """Get NFL standings using Sleeper API"""
         if season is None:
             season = CURRENT_YEAR
-        return self.nfl_standings.get_sleeper_nfl_standings(season, season_type, grouping)
+        return self.nfl_standings.get_standings(season, season_type, grouping)
     
-    # ==================== NFL News Methods ====================
+    # ==================== NFL Rankings Methods (Sleeper API) ====================
+    
+    def get_nfl_team_rankings(
+        self,
+        season: str = None,
+        season_type: str = "regular",
+        ranking_types: List[str] = None
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Get NFL team rankings using Sleeper API"""
+        if season is None:
+            season = CURRENT_YEAR
+        return self.nfl_rankings.get_team_rankings(season, season_type, ranking_types)
+    
+    # ==================== NFL News Methods (RSS Feeds) ====================
     
     def get_nfl_news_from_rss(
         self,
@@ -142,38 +201,25 @@ class SportsScraper:
         """Match news items to players"""
         return self.nfl_news.match_news_to_players(news_items, sport)
     
-    # ==================== NFL Schedule Methods ====================
+    # ==================== Legacy Methods (for backward compatibility) ====================
     
-    def get_nfl_schedule(
-        self,
-        season: str = None,
-        season_type: str = "regular",
-        week: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """Get NFL schedule/matchups from ESPN API"""
-        if season is None:
-            season = CURRENT_YEAR
-        return self.nfl_schedule.get_nfl_schedule(season, season_type, week)
-    
-    # ==================== NFL Rankings Methods ====================
-    
-    def get_nfl_team_rankings(
-        self,
-        season: str = None,
-        season_type: str = "regular",
-        ranking_type: str = "offense"
-    ) -> List[Dict[str, Any]]:
-        """Get NFL team rankings by offense, defense, etc."""
-        if season is None:
-            season = CURRENT_YEAR
-        return self.nfl_rankings.get_nfl_team_rankings(season, season_type, ranking_type)
+    def get_sleeper_draft(self, draft_id: str) -> Dict[str, Any]:
+        """Get draft information from Sleeper"""
+        try:
+            return self.sleeper_api.get_draft(draft_id)
+        except Exception as e:
+            raise Exception(f"Failed to fetch Sleeper draft: {str(e)}")
     
     # ==================== Utility Methods ====================
     
     def save_to_document_format(self, data: Dict[str, Any], source: str, title: Optional[str] = None) -> Dict[str, Any]:
         """Convert scraped data to document format for MongoDB storage"""
-        return self.sleeper_api.save_to_document_format(data, source, title)
+        from .scrapers.base_scraper import BaseScraper
+        base_scraper = BaseScraper()
+        return base_scraper.save_to_document_format(data, source, title)
     
     def batch_fetch(self, urls: List[str], source: str = "sleeper") -> List[Dict[str, Any]]:
         """Batch fetch multiple URLs"""
-        return self.sleeper_api.batch_fetch(urls, source)
+        from .scrapers.base_scraper import BaseScraper
+        base_scraper = BaseScraper()
+        return base_scraper.batch_fetch(urls, source)

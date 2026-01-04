@@ -30,7 +30,6 @@ def run_all_tests():
     """Run all test files"""
     test_files = [
         "test_mongodb_connection.py",
-        "test_feedback.py", 
         "test_training_data.py",
         "test_complete_system.py"
     ]

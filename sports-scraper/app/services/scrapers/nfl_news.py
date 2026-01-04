@@ -1,6 +1,9 @@
 """
 NFL News Scraper
 Fetches NFL news from RSS feeds and matches to players
+
+API Used: RSS Feeds + Sleeper API (for player matching)
+Data Source: ESPN/NFL.com RSS feeds
 """
 
 import re
@@ -14,15 +17,15 @@ from .base_scraper import BaseScraper
 class NFLNewsScraper(BaseScraper):
     """Scraper for NFL news from RSS feeds"""
     
-    def __init__(self, sleeper_api_scraper=None):
+    def __init__(self, sleeper_api=None):
         """
         Initialize NFL News Scraper
         
         Args:
-            sleeper_api_scraper: Optional SleeperAPIScraper instance for player matching
+            sleeper_api: Optional SleeperAPI instance for player matching
         """
         super().__init__()
-        self.sleeper_api_scraper = sleeper_api_scraper
+        self.sleeper_api = sleeper_api
     
     def get_nfl_news_from_rss(
         self,
@@ -197,12 +200,12 @@ class NFLNewsScraper(BaseScraper):
         Returns:
             Dictionary mapping player IDs to lists of matched news items
         """
-        if not self.sleeper_api_scraper:
-            raise Exception("SleeperAPIScraper instance required for player matching")
+        if not self.sleeper_api:
+            raise Exception("SleeperAPI instance required for player matching")
         
         try:
             # Get all players
-            all_players = self.sleeper_api_scraper.get_sleeper_players(sport)
+            all_players = self.sleeper_api.get_all_players(sport)
             
             # Build player name lookup - ONLY full names to avoid false positives
             player_lookup = {}

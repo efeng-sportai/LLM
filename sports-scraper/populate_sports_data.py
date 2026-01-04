@@ -12,9 +12,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.services.data_populator import DataPopulator
 from app.database import connect_to_mongo, close_mongo_connection
+from app.utils.season_utils import get_smart_season_defaults, SeasonDetector
 
-# Get current year
-CURRENT_YEAR = str(datetime.now().year)
+# Smart season detection
+season_info = get_smart_season_defaults()
+CURRENT_YEAR = season_info["season"]
 
 async def populate_sleeper_examples():
     """Example: Populate Sleeper NFL data"""
@@ -181,6 +183,18 @@ async def main():
     print("=" * 60)
     print("\nThis script will populate MongoDB with NFL data from Sleeper")
     print("Make sure MongoDB is running and configured correctly.\n")
+    
+    # Show smart season detection info
+    detector = SeasonDetector()
+    current_season_info = detector.get_season_info()
+    
+    print("🧠 Smart Season Detection:")
+    print(f"   Current Date: {datetime.now().strftime('%B %d, %Y')}")
+    print(f"   NFL Season Phase: {current_season_info['phase'].replace('_', ' ').title()}")
+    print(f"   Current NFL Season: {current_season_info['season_year']}")
+    print(f"   Using Season: {CURRENT_YEAR} ({season_info['recommendation']['reason']})")
+    print(f"   Available Seasons: {', '.join(detector.get_available_seasons())}")
+    print()
     
     try:
         # Connect to MongoDB

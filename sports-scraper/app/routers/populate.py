@@ -8,9 +8,11 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from app.services.data_populator import DataPopulator
+from app.utils.season_utils import get_smart_season_defaults
 
-# Get current year as default
-CURRENT_YEAR = str(datetime.now().year)
+# Smart season detection
+season_defaults = get_smart_season_defaults()
+CURRENT_YEAR = season_defaults["season"]
 
 router = APIRouter()
 populator = DataPopulator()
@@ -286,6 +288,32 @@ async def get_population_stats():
         return {
             "status": "success",
             "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/season-info")
+async def get_season_info():
+    """Get smart season detection information"""
+    try:
+        from app.utils.season_utils import SeasonDetector, get_smart_season_defaults
+        
+        detector = SeasonDetector()
+        current_info = detector.get_season_info()
+        defaults = get_smart_season_defaults()
+        
+        return {
+            "status": "success",
+            "current_date": datetime.now().isoformat(),
+            "current_season_info": current_info,
+            "recommended_defaults": defaults,
+            "available_seasons": detector.get_available_seasons(),
+            "explanation": {
+                "current_nfl_season": f"The current NFL season is {current_info['season_year']}",
+                "phase": f"We are currently in the {current_info['phase'].replace('_', ' ')} phase",
+                "recommended_season": f"For data scraping, we recommend using {defaults['season']} season",
+                "reason": defaults['recommendation']['reason']
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

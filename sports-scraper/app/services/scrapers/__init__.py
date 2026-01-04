@@ -1,20 +1,26 @@
 """
-Scraper modules for different data sources
+Scrapers Package
+Data-specific scrapers that use API clients to get structured data
+
+Architecture:
+- Each scraper focuses on specific data (schedule, players, standings, rankings)
+- Scrapers use API clients from the apis/ package
+- Clear separation between API calls and data processing
 """
 
 from .base_scraper import BaseScraper
-from .sleeper_api import SleeperAPIScraper
-from .nfl_schedule import NFLScheduleScraper
-from .nfl_rankings import NFLRankingsScraper
+from .nfl_schedule_scraper import NFLScheduleScraper
+from .nfl_players_scraper import NFLPlayersScraper
+from .nfl_standings_scraper import NFLStandingsScraper
+from .nfl_rankings_scraper import NFLRankingsScraper
 from .nfl_news import NFLNewsScraper
-from .nfl_standings import NFLStandingsScraper
 
 __all__ = [
     "BaseScraper",
-    "SleeperAPIScraper",
     "NFLScheduleScraper",
+    "NFLPlayersScraper", 
+    "NFLStandingsScraper",
     "NFLRankingsScraper",
     "NFLNewsScraper",
-    "NFLStandingsScraper",
 ]
 
