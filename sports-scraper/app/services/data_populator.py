@@ -1301,3 +1301,434 @@ class DataPopulator:
             pass
         
         return stats
+    
+    # ==================== NEW GRANULAR DATA POPULATION METHODS ====================
+    
+    async def populate_player_game_logs(
+        self,
+        player_ids: List[str],
+        season: str = None,
+        source: str = "espn"
+    ) -> Union[str, List[str]]:
+        """
+        Populate database with player game logs as training data
+        
+        Args:
+            player_ids: List of player IDs to get game logs for
+            season: Season year (default: current year)
+            source: Data source - 'espn' or 'pfr' (default: 'espn')
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            training_ids = []
+            
+            for player_id in player_ids:
+                try:
+                    # Get game logs for this player
+                    game_logs = self.scraper.get_player_game_logs(player_id, season, source)
+                    
+                    if not game_logs:
+                        continue
+                    
+                    # Extract player info from first game log
+                    player_name = game_logs[0].get('player_name', f'Player {player_id}')
+                    position = game_logs[0].get('position', 'Unknown')
+                    
+                    # Format response
+                    response = self.scraper.nfl_game_logs.format_game_logs_for_training(
+                        game_logs, player_name, position
+                    )
+                    
+                    # Create prompt
+                    prompt = f"What are the game logs for {player_name} ({position}) in the {season} season?"
+                    
+                    # Save as training data
+                    training_id = await self.save_training_data(
+                        prompt=prompt,
+                        response=response,
+                        context=f"NFL Player Game Logs - {player_name} ({season})",
+                        category="player_game_logs",
+                        source_type="web_scraper",
+                        metadata={
+                            "sport": "nfl",
+                            "player_id": player_id,
+                            "player_name": player_name,
+                            "position": position,
+                            "season": season,
+                            "data_source": source,
+                            "total_games": len(game_logs),
+                            "raw_game_logs": game_logs
+                        }
+                    )
+                    training_ids.append(training_id)
+                    
+                except Exception as e:
+                    print(f"Warning: Failed to populate game logs for player {player_id}: {str(e)}")
+                    continue
+            
+            return training_ids if len(training_ids) > 1 else (training_ids[0] if training_ids else None)
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate player game logs: {str(e)}")
+    
+    async def populate_advanced_team_stats(
+        self,
+        season: str = None,
+        source: str = "pfr"
+    ) -> str:
+        """
+        Populate database with advanced team statistics as training data
+        
+        Args:
+            season: Season year (default: current year)
+            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            # Get advanced team stats
+            team_stats = self.scraper.get_team_advanced_stats(season, source)
+            
+            if not team_stats:
+                raise Exception("No advanced team stats found")
+            
+            # Format response
+            response = self.scraper.nfl_advanced_stats.format_team_advanced_stats_for_training(
+                team_stats, season
+            )
+            
+            # Create prompt
+            prompt = f"What are the advanced team statistics for the {season} NFL season?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"NFL Advanced Team Statistics - {season}",
+                category="team_advanced_stats",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "season": season,
+                    "data_source": source,
+                    "total_teams": len(team_stats),
+                    "raw_team_stats": team_stats
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate advanced team stats: {str(e)}")
+    
+    async def populate_player_season_stats(
+        self,
+        position: str = "QB",
+        season: str = None,
+        source: str = "pfr"
+    ) -> str:
+        """
+        Populate database with player season statistics as training data
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K)
+            season: Season year (default: current year)
+            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            # Get player season stats
+            player_stats = self.scraper.get_player_season_stats(position, season, source)
+            
+            if not player_stats:
+                raise Exception(f"No {position} season stats found")
+            
+            # Format response
+            response = self.scraper.nfl_advanced_stats.format_player_season_stats_for_training(
+                player_stats, position, season
+            )
+            
+            # Create prompt
+            prompt = f"What are the {position} season statistics for the {season} NFL season?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"NFL {position} Season Statistics - {season}",
+                category="player_season_stats",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "season": season,
+                    "data_source": source,
+                    "total_players": len(player_stats),
+                    "raw_player_stats": player_stats
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate {position} season stats: {str(e)}")
+    
+    async def populate_fantasy_rankings(
+        self,
+        position: str = "QB",
+        scoring: str = "HALF",
+        week: str = "draft",
+        source: str = "fantasypros"
+    ) -> str:
+        """
+        Populate database with fantasy rankings as training data
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K, DEF)
+            scoring: Scoring format (STD, HALF, PPR)
+            week: Week number or 'draft' (default: 'draft')
+            source: Data source - 'fantasypros' or 'yahoo' (default: 'fantasypros')
+        """
+        try:
+            # Get expert rankings
+            rankings = self.scraper.get_expert_rankings(position, scoring, week, source)
+            
+            if not rankings:
+                raise Exception(f"No {position} rankings found")
+            
+            # Format response
+            response = self.scraper.nfl_fantasy_insights.format_expert_rankings_for_training(
+                rankings, position, scoring, week
+            )
+            
+            # Create prompt
+            week_text = f"Week {week}" if week != "draft" else "draft"
+            prompt = f"What are the expert consensus fantasy rankings for {position} ({scoring} scoring, {week_text})?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"Fantasy Rankings - {position} ({scoring}, {week_text})",
+                category="fantasy_rankings",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "scoring": scoring,
+                    "week": week,
+                    "data_source": source,
+                    "total_players": len(rankings),
+                    "raw_rankings": rankings
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate {position} fantasy rankings: {str(e)}")
+    
+    async def populate_fantasy_projections(
+        self,
+        position: str = "QB",
+        scoring: str = "HALF",
+        week: str = "draft",
+        source: str = "fantasypros"
+    ) -> str:
+        """
+        Populate database with fantasy projections as training data
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K, DEF)
+            scoring: Scoring format (STD, HALF, PPR)
+            week: Week number or 'draft' (default: 'draft')
+            source: Data source - 'fantasypros' (default: 'fantasypros')
+        """
+        try:
+            # Get projections
+            projections = self.scraper.get_fantasy_projections(position, scoring, week, source)
+            
+            if not projections:
+                raise Exception(f"No {position} projections found")
+            
+            # Format response
+            response = self.scraper.nfl_fantasy_insights.format_projections_for_training(
+                projections, position, scoring, week
+            )
+            
+            # Create prompt
+            week_text = f"Week {week}" if week != "draft" else "season"
+            prompt = f"What are the fantasy projections for {position} ({scoring} scoring, {week_text})?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"Fantasy Projections - {position} ({scoring}, {week_text})",
+                category="fantasy_projections",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "scoring": scoring,
+                    "week": week,
+                    "data_source": source,
+                    "total_players": len(projections),
+                    "raw_projections": projections
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate {position} fantasy projections: {str(e)}")
+    
+    async def populate_comprehensive_injury_report(
+        self,
+        source: str = "sleeper"
+    ) -> str:
+        """
+        Populate database with comprehensive injury report as training data using Sleeper data
+        
+        Args:
+            source: Data source - always 'sleeper' since we already have working Sleeper injury data
+        """
+        try:
+            # Use existing Sleeper injury data (already working and populated)
+            # This method is redundant since we already populate injured players in populate_sleeper_injured_players
+            # Just return the existing injury data ID or create a summary
+            
+            # Get injured players using existing Sleeper method
+            injured_players = self.scraper.get_sleeper_injured_players(
+                sport="nfl",
+                injury_status=None,  # Get all injury statuses
+                status=None,
+                has_team=True
+            )
+            
+            if not injured_players:
+                # If no injured players, create a simple "no injuries" document
+                response = "No injured NFL players found in Sleeper data."
+                prompt = "What is the current NFL injury report from Sleeper?"
+                
+                training_id = await self.save_training_data(
+                    prompt=prompt,
+                    response=response,
+                    context="NFL Injury Report (Sleeper - No Injuries)",
+                    category="injury_report",
+                    source_type="sleeper_scraper",
+                    metadata={
+                        "sport": "nfl",
+                        "data_source": "sleeper",
+                        "total_injuries": 0,
+                        "raw_injuries": []
+                    }
+                )
+                return training_id
+            
+            # Format response using existing method
+            response = self._format_injured_players_response(injured_players, None, None)
+            
+            # Create prompt
+            prompt = "What is the current NFL injury report from Sleeper?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context="NFL Injury Report (Sleeper)",
+                category="injury_report",
+                source_type="sleeper_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "data_source": "sleeper",
+                    "total_injuries": len(injured_players),
+                    "raw_injuries": injured_players
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate injury report: {str(e)}")
+    
+    async def populate_all_granular_data(
+        self,
+        season: str = None
+    ) -> Dict[str, Union[str, List[str]]]:
+        """
+        Populate all granular fantasy data types
+        
+        Args:
+            season: Season year (default: current year)
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        results = {}
+        
+        # 1. Advanced team stats
+        try:
+            results["advanced_team_stats"] = await self.populate_advanced_team_stats(season, "pfr")
+            print(f"   [OK] Advanced team stats populated")
+        except Exception as e:
+            print(f"   [ERROR] Advanced team stats failed: {str(e)}")
+            results["advanced_team_stats"] = None
+        
+        # 2. Player season stats for all positions
+        positions = ["QB", "RB", "WR", "TE", "K"]
+        results["player_season_stats"] = {}
+        
+        for position in positions:
+            try:
+                results["player_season_stats"][position] = await self.populate_player_season_stats(position, season, "pfr")
+                print(f"   [OK] {position} season stats populated")
+            except Exception as e:
+                print(f"   [ERROR] {position} season stats failed: {str(e)}")
+                results["player_season_stats"][position] = None
+        
+        # 3. Fantasy rankings for all positions and scoring types
+        scoring_types = ["STD", "HALF", "PPR"]
+        results["fantasy_rankings"] = {}
+        
+        for position in positions + ["DEF"]:
+            results["fantasy_rankings"][position] = {}
+            for scoring in scoring_types:
+                try:
+                    results["fantasy_rankings"][position][scoring] = await self.populate_fantasy_rankings(
+                        position, scoring, "draft", "fantasypros"
+                    )
+                    print(f"   [OK] {position} {scoring} rankings populated")
+                except Exception as e:
+                    print(f"   [ERROR] {position} {scoring} rankings failed: {str(e)}")
+                    results["fantasy_rankings"][position][scoring] = None
+        
+        # 4. Fantasy projections for all positions and scoring types
+        results["fantasy_projections"] = {}
+        
+        for position in positions + ["DEF"]:
+            results["fantasy_projections"][position] = {}
+            for scoring in scoring_types:
+                try:
+                    results["fantasy_projections"][position][scoring] = await self.populate_fantasy_projections(
+                        position, scoring, "draft", "fantasypros"
+                    )
+                    print(f"   [OK] {position} {scoring} projections populated")
+                except Exception as e:
+                    print(f"   [ERROR] {position} {scoring} projections failed: {str(e)}")
+                    results["fantasy_projections"][position][scoring] = None
+        
+        # 5. Comprehensive injury report (using Sleeper data)
+        try:
+            results["injury_report"] = await self.populate_comprehensive_injury_report("sleeper")
+            print(f"   [OK] Sleeper injury report populated")
+        except Exception as e:
+            print(f"   [ERROR] Injury report failed: {str(e)}")
+            results["injury_report"] = None
+        
+        return results
