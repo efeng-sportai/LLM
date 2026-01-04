@@ -1,6 +1,6 @@
 """
 NFL Fantasy Insights Scraper
-Uses FantasyPros API and Yahoo Sports API to get fantasy rankings, projections, and insights
+Uses FantasyPros API to get fantasy rankings, projections, and insights
 """
 
 from typing import Dict, List, Optional, Any
@@ -30,7 +30,7 @@ class NFLFantasyInsightsScraper(BaseScraper):
             position: Player position (QB, RB, WR, TE, K, DEF)
             scoring: Scoring format (STD, HALF, PPR)
             week: Week number or 'draft' (default: 'draft')
-            source: Data source - 'fantasypros' or 'yahoo' (default: 'fantasypros')
+            source: Data source - 'fantasypros' (default: 'fantasypros')
         """
         try:
             if source.lower() == "fantasypros":
