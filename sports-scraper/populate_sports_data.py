@@ -122,36 +122,6 @@ async def populate_sleeper_examples():
         print(f"   [ERROR] Error: {e}")
         import traceback
         traceback.print_exc()
-    
-    # Example 7: Populate user and their leagues (example - needs real username)
-    print("\n7. Populating Sleeper User (example - replace with real username)...")
-    print("   Note: Replace 'example_user' with a real Sleeper username")
-    try:
-        result = await populator.populate_sleeper_user(username="example_user")
-        if result.get("user_id"):
-            print(f"   [OK] User saved (ID: {result['user_id']})")
-            print(f"   [OK] {len(result['leagues'])} leagues saved")
-        else:
-            print("   [WARNING] User not found (expected with example username)")
-    except Exception as e:
-        print(f"   [ERROR] Error (expected with example): {e}")
-    
-    # Example 8: Populate a specific league
-    print("\n8. Populating Sleeper League (example - replace with real league_id)...")
-    print("   Note: Replace '1234567890' with a real Sleeper league ID")
-    try:
-        result = await populator.populate_sleeper_league(
-            league_id="1234567890",
-            include_rosters=True,
-            include_matchups=True
-        )
-        if result.get("league_doc_id"):
-            print(f"   [OK] League saved (ID: {result['league_doc_id']})")
-            print(f"   [OK] Rosters and matchups saved")
-        else:
-            print("   [WARNING] League not found (expected with example ID)")
-    except Exception as e:
-        print(f"   [ERROR] Error (expected with example): {e}")
 
 async def get_statistics():
     """Get population statistics"""

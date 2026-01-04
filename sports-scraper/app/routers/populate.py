@@ -19,15 +19,6 @@ populator = DataPopulator()
 
 # ==================== Request Models ====================
 
-class SleeperUserRequest(BaseModel):
-    username: Optional[str] = None
-    user_id: Optional[str] = None
-
-class SleeperLeagueRequest(BaseModel):
-    league_id: str
-    include_rosters: bool = True
-    include_matchups: bool = True
-
 class SleeperPlayersRequest(BaseModel):
     sport: str = "nfl"
     top_n: int = 100
@@ -67,37 +58,7 @@ class SleeperTeamRankingsRequest(BaseModel):
     season_type: str = "regular"  # Season type: "regular", "pre", "post"
     ranking_types: Optional[List[str]] = None  # List of ranking types: ["offense", "defense", "total"] (default: all)
 
-# ==================== Sleeper Population Endpoints ====================
-
-@router.post("/sleeper/user")
-async def populate_sleeper_user(request: SleeperUserRequest):
-    """Populate database with Sleeper user data and their leagues"""
-    try:
-        result = await populator.populate_sleeper_user(request.username, request.user_id)
-        return {
-            "message": "User populated successfully",
-            "status": "completed",
-            "result": result
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/sleeper/league")
-async def populate_sleeper_league(request: SleeperLeagueRequest):
-    """Populate database with complete Sleeper league data"""
-    try:
-        result = await populator.populate_sleeper_league(
-            request.league_id,
-            request.include_rosters,
-            request.include_matchups
-        )
-        return {
-            "message": "League populated successfully",
-            "status": "completed",
-            "result": result
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# ==================== NFL Data Population Endpoints ====================
 
 @router.post("/sleeper/players")
 async def populate_sleeper_players(request: SleeperPlayersRequest):
