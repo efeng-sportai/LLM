@@ -47,14 +47,23 @@ async def populate_core_data():
     # Example 2: Populate NFL team rankings (offense, defense only)
     print("\n2. Populating NFL Team Rankings (Sleeper API - Offense, Defense)...")
     try:
+        # Get the rankings first to show counts
+        ranking_types = ["offense", "defense"]
+        rankings_dict = populator.scraper.get_nfl_team_rankings(CURRENT_YEAR, "regular", ranking_types)
+        offense_count = len(rankings_dict.get("offense", [])) if rankings_dict.get("offense") else 0
+        defense_count = len(rankings_dict.get("defense", [])) if rankings_dict.get("defense") else 0
+        
         doc_ids = await populator.populate_nfl_team_rankings(
             season=CURRENT_YEAR,
             season_type="regular",
             ranking_types=["offense", "defense"]
         )
         if isinstance(doc_ids, list):
+            print(f"   [OK] Saved Offense rankings with ID: {doc_ids[0]} ({offense_count} teams)")
+            print(f"   [OK] Saved Defense rankings with ID: {doc_ids[1]} ({defense_count} teams)")
             print(f"   [OK] Team rankings saved ({len(doc_ids)} documents):")
             for i, doc_id in enumerate(doc_ids):
+                ranking_type = ["offense", "defense"][i] if i < 2 else f"document_{i+1}"
                 print(f"      - Document {i+1}: {doc_id}")
         else:
             print(f"   [OK] Team rankings saved (ID: {doc_ids})")
@@ -91,8 +100,12 @@ async def populate_core_data():
     # Example 4: Populate injured/out players
     print("\n4. Populating Injured/Out NFL Players (Sleeper API)...")
     try:
+        # Get the injured players first to show count
+        injured_players = populator.scraper.get_sleeper_injured_players("nfl")
+        injured_count = len(injured_players) if injured_players else 0
+        
         doc_id = await populator.populate_sleeper_injured_players("nfl")
-        print(f"   [OK] Injured/out players saved (ID: {doc_id})")
+        print(f"   [OK] Injured/out players saved (ID: {doc_id}) - {injured_count} players processed")
     except Exception as e:
         print(f"   [ERROR] Error: {e}")
         import traceback
@@ -109,8 +122,12 @@ async def populate_granular_data():
     # Example 1: Populate advanced team stats
     print("\n1. Populating Advanced Team Statistics (Pro Football Reference)...")
     try:
+        # Get the stats first to show count
+        team_stats = populator.scraper.get_team_advanced_stats(season=CURRENT_YEAR, source="pfr")
+        team_count = len(team_stats) if team_stats else 0
+        
         doc_id = await populator.populate_advanced_team_stats(season=CURRENT_YEAR, source="pfr")
-        print(f"   [OK] Advanced team stats saved (ID: {doc_id})")
+        print(f"   [OK] Advanced team stats saved (ID: {doc_id}) - {team_count} teams processed")
     except Exception as e:
         print(f"   [ERROR] Error: {e}")
         import traceback
@@ -121,8 +138,12 @@ async def populate_granular_data():
     positions = ["QB", "RB", "WR", "TE"]
     for position in positions:
         try:
+            # Get the stats first to show count
+            player_stats = populator.scraper.get_player_season_stats(position=position, season=CURRENT_YEAR, source="pfr")
+            player_count = len(player_stats) if player_stats else 0
+            
             doc_id = await populator.populate_player_season_stats(position=position, season=CURRENT_YEAR, source="pfr")
-            print(f"   [OK] {position} season stats saved (ID: {doc_id})")
+            print(f"   [OK] {position} season stats saved (ID: {doc_id}) - {player_count} players processed")
         except Exception as e:
             print(f"   [ERROR] {position} season stats failed: {e}")
     
