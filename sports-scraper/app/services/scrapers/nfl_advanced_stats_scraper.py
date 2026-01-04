@@ -275,7 +275,10 @@ class NFLAdvancedStatsScraper(BaseScraper):
         else:
             sorted_stats = stats
         
-        for i, player_stats in enumerate(sorted_stats[:50], 1):  # Top 50
+        # Show all players, not just top 50
+        display_limit = len(sorted_stats)  # Show all players
+        
+        for i, player_stats in enumerate(sorted_stats[:display_limit], 1):
             player_name = player_stats.get('player', 'Unknown')
             team = player_stats.get('team', 'N/A')
             

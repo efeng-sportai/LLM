@@ -258,7 +258,7 @@ class ProFootballReferenceAPI:
             if len(cells) != len(headers):
                 continue
             
-            player_data = {'position': position}
+            player_data = {}
             for i, cell in enumerate(cells):
                 if i < len(headers):
                     header = headers[i].lower().replace(' ', '_').replace('%', 'pct')
@@ -275,8 +275,22 @@ class ProFootballReferenceAPI:
                         else:
                             player_data[header] = value
             
-            if player_data.get('player') or player_data.get('name'):
-                players.append(player_data)
+            # Only include players if they have a name/player field
+            if not (player_data.get('player') or player_data.get('name')):
+                continue
+            
+            # For receiving stats, filter by actual position from the 'pos' column
+            if position in ['WR', 'TE'] and 'pos' in player_data:
+                actual_position = str(player_data['pos']).upper().strip()
+                # Skip if this player doesn't match the requested position
+                if position == 'WR' and actual_position != 'WR':
+                    continue
+                elif position == 'TE' and actual_position != 'TE':
+                    continue
+            
+            # Set the position for this player
+            player_data['position'] = position
+            players.append(player_data)
         
         return players
     
