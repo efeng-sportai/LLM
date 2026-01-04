@@ -112,9 +112,14 @@ async def populate_core_data():
         traceback.print_exc()
 
 async def populate_granular_data():
-    """Example: Populate granular fantasy data from web scraping"""
+    """Example: Populate detailed game-by-game data from web scraping (ALL PLAYERS)"""
     print("\n" + "=" * 60)
-    print("Populating Advanced Fantasy Data (Multiple Sources)")
+    print("Populating Detailed Game-by-Game Data (ALL PLAYERS - Pro Football Reference)")
+    print("=" * 60)
+    print("WARNING: This will process ALL NFL players with detailed game logs.")
+    print("Estimated time: 60-120 minutes depending on total players and rate limiting.")
+    print("Processing includes: Date, opponent, result, detailed stats for each game")
+    print("Data format: Like the example you showed with comprehensive per-game breakdowns")
     print("=" * 60)
     
     populator = DataPopulator()
@@ -133,19 +138,27 @@ async def populate_granular_data():
         import traceback
         traceback.print_exc()
     
-    # Example 2: Populate player season stats for key positions
-    print("\n2. Populating Player Season Statistics (Pro Football Reference)...")
+    # Example 2: Populate detailed game-by-game logs for ALL PLAYERS (Pro Football Reference)
+    print("\n2. Populating Game-by-Game Logs - ALL PLAYERS (Pro Football Reference)...")
+    print("   Note: Getting actual game logs with detailed per-game stats for every player")
+    print("   Warning: This will take significant time due to individual player requests + rate limiting")
     positions = ["QB", "RB", "WR", "TE"]
     for position in positions:
         try:
-            # Get the stats first to show count
-            player_stats = populator.scraper.get_player_season_stats(position=position, season=CURRENT_YEAR, source="pfr")
-            player_count = len(player_stats) if player_stats else 0
+            print(f"\n   Starting {position} game log collection for ALL players...")
             
-            doc_id = await populator.populate_player_season_stats(position=position, season=CURRENT_YEAR, source="pfr")
-            print(f"   [OK] {position} season stats saved (ID: {doc_id}) - {player_count} players processed")
+            doc_id = await populator.populate_player_game_logs(
+                position=position, season=CURRENT_YEAR, source="pfr", max_players=None  # ALL players
+            )
+            
+            print(f"   [OK] {position} game logs saved (ID: {doc_id})")
+            print(f"        - Includes detailed game-by-game performance data")
+            print(f"        - Date, opponent, result, and comprehensive stats per game")
+            
         except Exception as e:
-            print(f"   [ERROR] {position} season stats failed: {e}")
+            print(f"   [ERROR] {position} game logs failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Example 3: Populate injury report using Sleeper data
     print("\n3. Populating Injury Report (Sleeper API)...")

@@ -1366,6 +1366,201 @@ class DataPopulator:
         except Exception as e:
             raise Exception(f"Failed to populate {position} season stats: {str(e)}")
     
+    async def populate_enhanced_player_season_stats(
+        self,
+        position: str = "QB",
+        season: str = None,
+        source: str = "pfr",
+        max_players: int = 30
+    ) -> str:
+        """
+        Populate database with enhanced player season statistics as training data
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K)
+            season: Season year (default: current year)
+            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+            max_players: Maximum number of players to process (to avoid rate limits)
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            # Get enhanced player season stats
+            player_stats = self.scraper.nfl_advanced_stats.get_enhanced_player_season_stats(
+                position, season, source, include_advanced=True, max_players=max_players
+            )
+            
+            if not player_stats:
+                raise Exception(f"No enhanced {position} season stats found")
+            
+            # Format response using enhanced formatter
+            response = self.scraper.nfl_advanced_stats.format_enhanced_player_stats_for_training(
+                player_stats, position, season
+            )
+            
+            # Create prompt
+            prompt = f"What are the enhanced {position} season statistics with advanced metrics for the {season} NFL season?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"Enhanced NFL {position} Season Statistics - {season}",
+                category="enhanced_player_season_stats",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "season": season,
+                    "data_source": source,
+                    "total_players": len(player_stats),
+                    "max_players_processed": max_players,
+                    "enhanced_metrics": True,
+                    "rate_limited": True,
+                    "raw_player_stats": player_stats
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate enhanced {position} season stats: {str(e)}")
+    
+    async def populate_comprehensive_player_stats(
+        self,
+        position: str = "QB",
+        season: str = None,
+        source: str = "pfr"
+    ) -> str:
+        """
+        Populate database with comprehensive player statistics (ALL players, season + per-game data)
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K)
+            season: Season year (default: current year)
+            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            print(f"   [INFO] Starting comprehensive {position} data collection for ALL players...")
+            
+            # Get comprehensive player season stats (ALL players with game logs)
+            player_stats = self.scraper.nfl_advanced_stats.get_enhanced_player_season_stats(
+                position, season, source, 
+                include_advanced=True, 
+                include_game_logs=True,
+                max_players=None  # ALL players
+            )
+            
+            if not player_stats:
+                raise Exception(f"No comprehensive {position} season stats found")
+            
+            # Format response using comprehensive formatter
+            response = self.scraper.nfl_advanced_stats.format_comprehensive_player_stats_for_training(
+                player_stats, position, season
+            )
+            
+            # Create prompt
+            prompt = f"What are the comprehensive {position} statistics including season totals, per-game averages, advanced metrics, and consistency scores for ALL players in the {season} NFL season?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"Comprehensive NFL {position} Statistics - {season} (ALL PLAYERS)",
+                category="comprehensive_player_stats",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "season": season,
+                    "data_source": source,
+                    "total_players": len(player_stats),
+                    "all_players_processed": True,
+                    "includes_per_game_data": True,
+                    "includes_advanced_metrics": True,
+                    "includes_consistency_scores": True,
+                    "rate_limited": True,
+                    "processing_time_estimate_minutes": (len(player_stats) * 2.5) / 60,
+                    "raw_player_stats": player_stats[:100]  # Store first 100 for reference
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate comprehensive {position} stats: {str(e)}")
+    
+    async def populate_player_game_logs(
+        self,
+        position: str = "QB",
+        season: str = None,
+        source: str = "pfr",
+        max_players: int = None
+    ) -> str:
+        """
+        Populate database with detailed player game logs (game-by-game performance)
+        
+        Args:
+            position: Player position (QB, RB, WR, TE, K)
+            season: Season year (default: current year)
+            source: Data source - 'pfr' only for now
+            max_players: Maximum number of players (None = ALL players)
+        """
+        if season is None:
+            season = CURRENT_YEAR
+        
+        try:
+            print(f"   [INFO] Starting game log collection for {position} players...")
+            
+            # Get players with actual game logs
+            player_stats = self.scraper.nfl_advanced_stats.get_players_with_actual_game_logs(
+                position, season, source, max_players
+            )
+            
+            if not player_stats:
+                raise Exception(f"No {position} players with game logs found")
+            
+            # Count players with actual game logs
+            players_with_logs = len([p for p in player_stats if p.get('game_logs')])
+            
+            # Format response using game log formatter
+            response = self.scraper.nfl_advanced_stats.format_player_game_logs_for_training(
+                player_stats, position, season
+            )
+            
+            # Create prompt
+            prompt = f"What are the detailed game-by-game logs for {position} players in the {season} NFL season, including date, opponent, result, and all relevant stats for each game?"
+            
+            # Save as training data
+            training_id = await self.save_training_data(
+                prompt=prompt,
+                response=response,
+                context=f"NFL {position} Game-by-Game Logs - {season}",
+                category="player_game_logs",
+                source_type="web_scraper",
+                metadata={
+                    "sport": "nfl",
+                    "position": position,
+                    "season": season,
+                    "data_source": source,
+                    "total_players_processed": len(player_stats),
+                    "players_with_game_logs": players_with_logs,
+                    "all_players_processed": max_players is None,
+                    "includes_game_by_game_data": True,
+                    "rate_limited": True,
+                    "raw_player_stats": player_stats[:50]  # Store first 50 for reference
+                }
+            )
+            
+            return training_id
+            
+        except Exception as e:
+            raise Exception(f"Failed to populate {position} game logs: {str(e)}")
+    
     async def populate_comprehensive_injury_report(
         self,
         source: str = "sleeper"
