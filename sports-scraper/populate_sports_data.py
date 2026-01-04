@@ -44,19 +44,18 @@ async def populate_core_data():
         import traceback
         traceback.print_exc()
     
-    # Example 2: Populate NFL team rankings (offense, defense, total)
-    print("\n2. Populating NFL Team Rankings (Sleeper API - Offense, Defense, Total)...")
+    # Example 2: Populate NFL team rankings (offense, defense only)
+    print("\n2. Populating NFL Team Rankings (Sleeper API - Offense, Defense)...")
     try:
         doc_ids = await populator.populate_nfl_team_rankings(
             season=CURRENT_YEAR,
             season_type="regular",
-            ranking_types=["offense", "defense", "total"]
+            ranking_types=["offense", "defense"]
         )
         if isinstance(doc_ids, list):
             print(f"   [OK] Team rankings saved ({len(doc_ids)} documents):")
             for i, doc_id in enumerate(doc_ids):
                 print(f"      - Document {i+1}: {doc_id}")
-            print(f"      Note: Defense rankings may be skipped if not available")
         else:
             print(f"   [OK] Team rankings saved (ID: {doc_ids})")
     except Exception as e:
@@ -89,22 +88,8 @@ async def populate_core_data():
         import traceback
         traceback.print_exc()
     
-    # Example 4: Populate NFL standings
-    print("\n4. Populating NFL Standings (Sleeper API)...")
-    try:
-        doc_id = await populator.populate_sleeper_nfl_standings(
-            season=CURRENT_YEAR,
-            season_type="regular",
-            grouping="league"
-        )
-        print(f"   [OK] NFL standings saved (ID: {doc_id})")
-    except Exception as e:
-        print(f"   [ERROR] Error: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # Example 5: Populate injured/out players
-    print("\n5. Populating Injured/Out NFL Players (Sleeper API)...")
+    # Example 4: Populate injured/out players
+    print("\n4. Populating Injured/Out NFL Players (Sleeper API)...")
     try:
         doc_id = await populator.populate_sleeper_injured_players("nfl")
         print(f"   [OK] Injured/out players saved (ID: {doc_id})")
@@ -141,34 +126,8 @@ async def populate_granular_data():
         except Exception as e:
             print(f"   [ERROR] {position} season stats failed: {e}")
     
-    # Example 3: Populate fantasy rankings (draft rankings)
-    print("\n3. Populating Fantasy Rankings (FantasyPros - Draft)...")
-    positions = ["QB", "RB", "WR", "TE"]
-    scoring_types = ["HALF", "PPR"]
-    for position in positions:
-        for scoring in scoring_types:
-            try:
-                doc_id = await populator.populate_fantasy_rankings(
-                    position=position, scoring=scoring, week="draft", source="fantasypros"
-                )
-                print(f"   [OK] {position} {scoring} rankings saved (ID: {doc_id})")
-            except Exception as e:
-                print(f"   [ERROR] {position} {scoring} rankings failed: {e}")
-    
-    # Example 4: Populate fantasy projections (season projections)
-    print("\n4. Populating Fantasy Projections (FantasyPros - Season)...")
-    for position in positions:
-        for scoring in scoring_types:
-            try:
-                doc_id = await populator.populate_fantasy_projections(
-                    position=position, scoring=scoring, week="draft", source="fantasypros"
-                )
-                print(f"   [OK] {position} {scoring} projections saved (ID: {doc_id})")
-            except Exception as e:
-                print(f"   [ERROR] {position} {scoring} projections failed: {e}")
-    
-    # Example 5: Populate injury report using Sleeper data
-    print("\n5. Populating Injury Report (Sleeper API)...")
+    # Example 3: Populate injury report using Sleeper data
+    print("\n3. Populating Injury Report (Sleeper API)...")
     try:
         doc_id = await populator.populate_comprehensive_injury_report(source="sleeper")
         print(f"   [OK] Sleeper injury report saved (ID: {doc_id})")
@@ -177,8 +136,8 @@ async def populate_granular_data():
         import traceback
         traceback.print_exc()
     
-    # Example 6: Populate NFL player news from RSS feeds (most recent articles only) - LAST
-    print("\n6. Populating NFL Player News (ESPN RSS - past week)...")
+    # Example 4: Populate NFL player news from RSS feeds (most recent articles only) - LAST
+    print("\n4. Populating NFL Player News (ESPN RSS - past week)...")
     try:
         doc_ids = await populator.populate_nfl_player_news(source="espn", limit=50, match_to_players=True, max_age_hours=168)
         if isinstance(doc_ids, list):
@@ -227,7 +186,6 @@ async def main():
     print("\nThis script will populate MongoDB with NFL data from multiple sources:")
     print("• Sleeper API: Player stats, standings, injuries, trending players")
     print("• Pro Football Reference: Advanced team/player statistics")  
-    print("• FantasyPros: Expert rankings and projections")
     print("• ESPN API: Schedule, team data, news")
     print("\nMake sure MongoDB is running and configured correctly.\n")
     

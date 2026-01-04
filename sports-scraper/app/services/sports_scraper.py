@@ -14,15 +14,12 @@ from .apis.espn_api import ESPNAPI
 from .apis.espn_web_api import ESPNWebAPI
 from .apis.pro_football_reference_api import ProFootballReferenceAPI
 from .apis.nfl_com_api import NFLComAPI
-from .apis.fantasy_pros_api import FantasyProAPI
 from .scrapers.nfl_schedule_scraper import NFLScheduleScraper
 from .scrapers.nfl_players_scraper import NFLPlayersScraper
-from .scrapers.nfl_standings_scraper import NFLStandingsScraper
 from .scrapers.nfl_rankings_scraper import NFLRankingsScraper
 from .scrapers.nfl_news import NFLNewsScraper  # Keep existing news scraper
 from .scrapers.nfl_game_logs_scraper import NFLGameLogsScraper
 from .scrapers.nfl_advanced_stats_scraper import NFLAdvancedStatsScraper
-from .scrapers.nfl_fantasy_insights_scraper import NFLFantasyInsightsScraper
 from ..utils.season_utils import get_smart_season_defaults
 
 # Smart season detection
@@ -40,18 +37,15 @@ class SportsScraper:
         self.espn_web_api = ESPNWebAPI()
         self.pfr_api = ProFootballReferenceAPI()
         self.nfl_api = NFLComAPI()
-        self.fantasypros_api = FantasyProAPI()
         
         # Specialized scrapers
         self.nfl_schedule = NFLScheduleScraper()
         self.nfl_players = NFLPlayersScraper()
-        self.nfl_standings = NFLStandingsScraper()
         self.nfl_rankings = NFLRankingsScraper()
         
         # New granular data scrapers
         self.nfl_game_logs = NFLGameLogsScraper()
         self.nfl_advanced_stats = NFLAdvancedStatsScraper()
-        self.nfl_fantasy_insights = NFLFantasyInsightsScraper()
         
         # Keep existing news scraper (uses RSS feeds)
         self.nfl_news = NFLNewsScraper(sleeper_api=self.sleeper_api)
@@ -283,67 +277,6 @@ class SportsScraper:
     ) -> List[Dict[str, Any]]:
         """Get weekly matchup data with advanced metrics"""
         return self.nfl_advanced_stats.get_weekly_matchups(season, week, source)
-    
-    # ==================== Fantasy Insights Methods ====================
-    
-    def get_expert_rankings(
-        self,
-        position: str = "QB",
-        scoring: str = "HALF",
-        week: str = "draft",
-        source: str = "fantasypros"
-    ) -> List[Dict[str, Any]]:
-        """Get expert consensus rankings"""
-        return self.nfl_fantasy_insights.get_expert_rankings(position, scoring, week, source)
-    
-    def get_fantasy_projections(
-        self,
-        position: str = "QB",
-        scoring: str = "HALF",
-        week: str = "draft",
-        source: str = "fantasypros"
-    ) -> List[Dict[str, Any]]:
-        """Get fantasy projections"""
-        return self.nfl_fantasy_insights.get_projections(position, scoring, week, source)
-    
-    def get_start_sit_recommendations(
-        self,
-        position: str = "QB",
-        week: str = "1",
-        source: str = "fantasypros"
-    ) -> List[Dict[str, Any]]:
-        """Get start/sit recommendations"""
-        return self.nfl_fantasy_insights.get_start_sit_recommendations(position, week, source)
-    
-    def get_trade_values(
-        self,
-        scoring: str = "HALF",
-        source: str = "fantasypros"
-    ) -> List[Dict[str, Any]]:
-        """Get current trade values"""
-        return self.nfl_fantasy_insights.get_trade_values(scoring, source)
-    
-    def get_waiver_wire_pickups(
-        self,
-        week: str = "1",
-        source: str = "fantasypros"
-    ) -> List[Dict[str, Any]]:
-        """Get waiver wire pickup recommendations"""
-        return self.nfl_fantasy_insights.get_waiver_wire_pickups(week, source)
-    
-    def get_all_position_rankings(
-        self,
-        scoring: str = "HALF",
-        week: str = "draft",
-        source: str = "fantasypros"
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        """Get rankings for all major positions"""
-        return self.nfl_fantasy_insights.get_all_position_rankings(scoring, week, source)
-    
-    # ==================== Injury Reports Methods (Using Sleeper Data) ====================
-    
-    # Note: We use Sleeper's injury data through get_sleeper_injured_players() method
-    # The dedicated injury scraper is removed since Sleeper provides comprehensive injury data
     
     # ==================== Utility Methods ====================
     

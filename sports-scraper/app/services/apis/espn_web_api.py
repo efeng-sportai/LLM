@@ -219,11 +219,9 @@ class ESPNWebAPI:
     # ==================== Legacy Methods (for compatibility) ====================
     
     def get_player_game_log(self, player_id: str, season: str = None) -> List[Dict[str, Any]]:
-        """Get player game log - placeholder for ESPN API implementation"""
-        # ESPN's player API requires different endpoints and authentication
-        # For now, return empty list - this would need ESPN's player API access
-        return []
+        """Get player game log - ESPN API implementation not available"""
+        raise NotImplementedError("ESPN player game log API requires authentication and is not currently implemented. Use Pro Football Reference instead.")
     
     def get_team_depth_chart(self, team_name: str) -> Dict[str, Any]:
-        """Get team depth chart - placeholder"""
-        return {'team': team_name, 'positions': {}, 'source': 'espn_api'}
+        """Get team depth chart - not implemented"""
+        raise NotImplementedError("ESPN team depth chart API is not currently implemented.")

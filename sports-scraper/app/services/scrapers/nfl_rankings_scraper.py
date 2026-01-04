@@ -38,7 +38,7 @@ class NFLRankingsScraper(BaseScraper):
             season = str(datetime.now().year)
         
         if ranking_types is None:
-            ranking_types = ['offense', 'defense', 'total']
+            ranking_types = ['offense', 'defense']
         
         try:
             results = {}
@@ -48,9 +48,6 @@ class NFLRankingsScraper(BaseScraper):
             
             if 'defense' in ranking_types:
                 results['defense'] = self._get_defensive_rankings(season, season_type)
-            
-            if 'total' in ranking_types:
-                results['total'] = self._get_total_rankings(season, season_type)
             
             return results
         except Exception as e:
@@ -199,24 +196,3 @@ class NFLRankingsScraper(BaseScraper):
             return rankings
         except Exception as e:
             raise Exception(f"Failed to get defensive rankings: {str(e)}")
-    
-    def _get_total_rankings(self, season: str, season_type: str) -> List[Dict[str, Any]]:
-        """Get total team rankings based on win percentage"""
-        try:
-            # Import here to avoid circular imports
-            from .nfl_standings_scraper import NFLStandingsScraper
-            
-            standings_scraper = NFLStandingsScraper()
-            standings = standings_scraper.get_standings(season, season_type)
-            
-            # Sort by win percentage (descending)
-            standings.sort(key=lambda x: x.get('win_pct', 0), reverse=True)
-            
-            # Add rankings
-            for i, team_data in enumerate(standings, 1):
-                team_data['rank'] = i
-                team_data['ranking_type'] = 'total'
-            
-            return standings
-        except Exception as e:
-            raise Exception(f"Failed to get total rankings: {str(e)}")

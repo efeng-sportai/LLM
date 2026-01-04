@@ -101,17 +101,7 @@ class NFLGameLogsScraper(BaseScraper):
             source: Data source - 'espn' or 'pfr' (default: 'espn')
             limit: Number of top players to get logs for
         """
-        if season is None:
-            season = str(datetime.now().year)
-        
-        # This would need to be integrated with existing player ranking systems
-        # For now, return empty dict as placeholder
-        # In a full implementation, this would:
-        # 1. Get top players at position from existing scrapers
-        # 2. Extract their player IDs
-        # 3. Get game logs for each player
-        
-        return {}
+        raise NotImplementedError("Top performers game logs requires integration with player ranking systems. Use get_player_game_logs for specific players instead.")
     
     def get_recent_game_logs(
         self,
@@ -127,17 +117,7 @@ class NFLGameLogsScraper(BaseScraper):
             season: Season year (default: current year)
             source: Data source - 'espn' or 'pfr' (default: 'espn')
         """
-        if season is None:
-            season = str(datetime.now().year)
-        
-        # This would need integration with schedule/week detection
-        # For now, return empty list as placeholder
-        # In a full implementation, this would:
-        # 1. Determine current week
-        # 2. Get games from recent weeks
-        # 3. Get player game logs from those games
-        
-        return []
+        raise NotImplementedError("Recent game logs requires integration with schedule/week detection systems. Use get_player_game_logs for specific players instead.")
     
     def format_game_logs_for_training(
         self,
