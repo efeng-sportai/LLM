@@ -1,28 +1,26 @@
 """
 NFL Game Logs Scraper
-Uses ESPN Web API and Pro Football Reference API to get individual player game logs
+Uses Pro Football Reference API to get individual player game logs
 """
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from .base_scraper import BaseScraper
-from ..apis.espn_web_api import ESPNWebAPI
 from ..apis.pro_football_reference_api import ProFootballReferenceAPI
 
 
 class NFLGameLogsScraper(BaseScraper):
-    """Scraper for NFL player game logs using ESPN Web API and Pro Football Reference API"""
+    """Scraper for NFL player game logs using Pro Football Reference API"""
     
     def __init__(self):
         super().__init__()
-        self.espn_api = ESPNWebAPI()
         self.pfr_api = ProFootballReferenceAPI()
     
     def get_player_game_logs(
         self,
         player_id: str,
         season: str = None,
-        source: str = "espn"
+        source: str = "pfr"
     ) -> List[Dict[str, Any]]:
         """
         Get individual game logs for a player
@@ -30,18 +28,16 @@ class NFLGameLogsScraper(BaseScraper):
         Args:
             player_id: Player ID (format depends on source)
             season: Season year (default: current year)
-            source: Data source - 'espn' or 'pfr' (default: 'espn')
+            source: Data source - 'pfr' only (default: 'pfr')
         """
         if season is None:
             season = str(datetime.now().year)
         
         try:
-            if source.lower() == "espn":
-                game_logs = self.espn_api.get_player_game_log(player_id, season)
-            elif source.lower() == "pfr":
+            if source.lower() == "pfr":
                 game_logs = self.pfr_api.get_player_game_log(player_id, season)
             else:
-                raise ValueError(f"Unsupported source: {source}")
+                raise ValueError(f"Unsupported source: {source}. Only 'pfr' is supported.")
             
             # Enrich with metadata
             for game_log in game_logs:
@@ -60,7 +56,7 @@ class NFLGameLogsScraper(BaseScraper):
         self,
         player_ids: List[str],
         season: str = None,
-        source: str = "espn"
+        source: str = "pfr"
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Get game logs for multiple players
@@ -68,7 +64,7 @@ class NFLGameLogsScraper(BaseScraper):
         Args:
             player_ids: List of player IDs
             season: Season year (default: current year)
-            source: Data source - 'espn' or 'pfr' (default: 'espn')
+            source: Data source - 'pfr' only (default: 'pfr')
         """
         if season is None:
             season = str(datetime.now().year)
@@ -89,7 +85,7 @@ class NFLGameLogsScraper(BaseScraper):
         self,
         position: str = "QB",
         season: str = None,
-        source: str = "espn",
+        source: str = "pfr",
         limit: int = 20
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -98,7 +94,7 @@ class NFLGameLogsScraper(BaseScraper):
         Args:
             position: Player position (QB, RB, WR, TE, K)
             season: Season year (default: current year)
-            source: Data source - 'espn' or 'pfr' (default: 'espn')
+            source: Data source - 'pfr' only (default: 'pfr')
             limit: Number of top players to get logs for
         """
         raise NotImplementedError("Top performers game logs requires integration with player ranking systems. Use get_player_game_logs for specific players instead.")
@@ -107,7 +103,7 @@ class NFLGameLogsScraper(BaseScraper):
         self,
         weeks_back: int = 4,
         season: str = None,
-        source: str = "espn"
+        source: str = "pfr"
     ) -> List[Dict[str, Any]]:
         """
         Get recent game logs across all players
@@ -115,7 +111,7 @@ class NFLGameLogsScraper(BaseScraper):
         Args:
             weeks_back: Number of weeks to look back
             season: Season year (default: current year)
-            source: Data source - 'espn' or 'pfr' (default: 'espn')
+            source: Data source - 'pfr' only (default: 'pfr')
         """
         raise NotImplementedError("Recent game logs requires integration with schedule/week detection systems. Use get_player_game_logs for specific players instead.")
     

@@ -11,7 +11,6 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from .apis.sleeper_api import SleeperAPI
 from .apis.espn_api import ESPNAPI
-from .apis.espn_web_api import ESPNWebAPI
 from .apis.pro_football_reference_api import ProFootballReferenceAPI
 from .scrapers.nfl_schedule_scraper import NFLScheduleScraper
 from .scrapers.nfl_players_scraper import NFLPlayersScraper
@@ -33,7 +32,6 @@ class SportsScraper:
         # API clients
         self.sleeper_api = SleeperAPI()
         self.espn_api = ESPNAPI()
-        self.espn_web_api = ESPNWebAPI()
         self.pfr_api = ProFootballReferenceAPI()
         
         # Specialized scrapers
