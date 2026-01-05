@@ -1,22 +1,20 @@
 """
 NFL Advanced Stats Scraper
-Uses Pro Football Reference API and NFL.com API to get advanced team and player statistics
+Uses Pro Football Reference API to get advanced team and player statistics
 """
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from .base_scraper import BaseScraper
 from ..apis.pro_football_reference_api import ProFootballReferenceAPI
-from ..apis.nfl_com_api import NFLComAPI
 
 
 class NFLAdvancedStatsScraper(BaseScraper):
-    """Scraper for NFL advanced statistics using Pro Football Reference API and NFL.com API"""
+    """Scraper for NFL advanced statistics using Pro Football Reference API"""
     
     def __init__(self, rate_limit_delay: float = 2.0):
         super().__init__()
         self.pfr_api = ProFootballReferenceAPI(rate_limit_delay=rate_limit_delay)
-        self.nfl_api = NFLComAPI()
     
     def get_team_advanced_stats(
         self,
@@ -28,7 +26,7 @@ class NFLAdvancedStatsScraper(BaseScraper):
         
         Args:
             season: Season year (default: current year)
-            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+            source: Data source - 'pfr' only (default: 'pfr')
         """
         if season is None:
             season = str(datetime.now().year)
@@ -36,16 +34,8 @@ class NFLAdvancedStatsScraper(BaseScraper):
         try:
             if source.lower() == "pfr":
                 stats = self.pfr_api.get_team_advanced_stats(season)
-            elif source.lower() == "nfl":
-                # Get multiple stat categories from NFL.com
-                offense_stats = self.nfl_api.get_team_stats("offense", season)
-                defense_stats = self.nfl_api.get_team_stats("defense", season)
-                special_teams_stats = self.nfl_api.get_team_stats("special_teams", season)
-                
-                # Combine all stats
-                stats = offense_stats + defense_stats + special_teams_stats
             else:
-                raise ValueError(f"Unsupported source: {source}")
+                raise ValueError(f"Unsupported source: {source}. Only 'pfr' is supported.")
             
             # Enrich with metadata
             for stat in stats:
@@ -72,7 +62,7 @@ class NFLAdvancedStatsScraper(BaseScraper):
         Args:
             position: Player position (QB, RB, WR, TE, K, DEF)
             season: Season year (default: current year)
-            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+            source: Data source - 'pfr' only (default: 'pfr')
         """
         if season is None:
             season = str(datetime.now().year)
@@ -80,10 +70,8 @@ class NFLAdvancedStatsScraper(BaseScraper):
         try:
             if source.lower() == "pfr":
                 stats = self.pfr_api.get_player_season_stats(position, season)
-            elif source.lower() == "nfl":
-                stats = self.nfl_api.get_player_stats(position, season)
             else:
-                raise ValueError(f"Unsupported source: {source}")
+                raise ValueError(f"Unsupported source: {source}. Only 'pfr' is supported.")
             
             # Enrich with metadata
             for stat in stats:
@@ -114,7 +102,7 @@ class NFLAdvancedStatsScraper(BaseScraper):
         Args:
             position: Player position (QB, RB, WR, TE, K)
             season: Season year (default: current year)
-            source: Data source - 'pfr' or 'nfl' (default: 'pfr')
+            source: Data source - 'pfr' only (default: 'pfr')
             include_advanced: Include advanced calculated metrics
             include_game_logs: Include per-game breakdowns
             max_players: Maximum number of players (None = ALL players)
@@ -134,10 +122,8 @@ class NFLAdvancedStatsScraper(BaseScraper):
             elif source.lower() == "pfr":
                 # Use basic method for all players
                 stats = self.pfr_api.get_player_season_stats(position, season)
-            elif source.lower() == "nfl":
-                stats = self.nfl_api.get_player_stats(position, season)
             else:
-                raise ValueError(f"Unsupported source: {source}")
+                raise ValueError(f"Unsupported source: {source}. Only 'pfr' is supported.")
             
             # Enrich with metadata
             for stat in stats:

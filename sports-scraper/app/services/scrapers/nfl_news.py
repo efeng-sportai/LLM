@@ -3,7 +3,7 @@ NFL News Scraper
 Fetches NFL news from RSS feeds and matches to players
 
 API Used: RSS Feeds + Sleeper API (for player matching)
-Data Source: ESPN/NFL.com RSS feeds
+Data Source: ESPN RSS feeds
 """
 
 import re
@@ -37,7 +37,7 @@ class NFLNewsScraper(BaseScraper):
         Get NFL news from RSS feeds (most recent articles only)
         
         Args:
-            source: News source - 'espn' or 'nfl' (default: 'espn')
+            source: News source - 'espn' only (default: 'espn')
             limit: Maximum number of news items to return (default: 50)
             max_age_hours: Only include articles published within this many hours (default: 168 = 7 days = 1 week)
             
@@ -50,12 +50,11 @@ class NFLNewsScraper(BaseScraper):
             
             # RSS feed URLs
             rss_urls = {
-                "espn": "https://www.espn.com/espn/rss/nfl/news",
-                "nfl": "http://www.nfl.com/rss/rsslanding?searchString=news"
+                "espn": "https://www.espn.com/espn/rss/nfl/news"
             }
             
             if source.lower() not in rss_urls:
-                raise ValueError(f"Unknown source: {source}. Must be 'espn' or 'nfl'")
+                raise ValueError(f"Unknown source: {source}. Must be 'espn'")
             
             url = rss_urls[source.lower()]
             response = self.session.get(url, timeout=30)

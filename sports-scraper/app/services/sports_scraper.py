@@ -13,7 +13,6 @@ from .apis.sleeper_api import SleeperAPI
 from .apis.espn_api import ESPNAPI
 from .apis.espn_web_api import ESPNWebAPI
 from .apis.pro_football_reference_api import ProFootballReferenceAPI
-from .apis.nfl_com_api import NFLComAPI
 from .scrapers.nfl_schedule_scraper import NFLScheduleScraper
 from .scrapers.nfl_players_scraper import NFLPlayersScraper
 from .scrapers.nfl_rankings_scraper import NFLRankingsScraper
@@ -36,7 +35,6 @@ class SportsScraper:
         self.espn_api = ESPNAPI()
         self.espn_web_api = ESPNWebAPI()
         self.pfr_api = ProFootballReferenceAPI()
-        self.nfl_api = NFLComAPI()
         
         # Specialized scrapers
         self.nfl_schedule = NFLScheduleScraper()
