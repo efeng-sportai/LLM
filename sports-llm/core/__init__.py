@@ -1,0 +1,1 @@
+# Core module - Claude LLM and main AI logic

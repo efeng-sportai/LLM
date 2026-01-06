@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
-from mongo_vector_collection import MongoVectorClient, MongoVectorCollection
+from utils.mongo_vector_collection import MongoVectorClient, MongoVectorCollection
 from pydantic import BaseModel
 import os
 import logging
@@ -16,14 +16,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Load .env file from parent directory (main SportAI Application folder)
+# Load .env file from project root
 try:
     from dotenv import load_dotenv
-    parent_dir = Path(__file__).parent.parent
-    env_file = parent_dir / '.env'
+    # Look for .env in the project root (two levels up from this file)
+    root_dir = Path(__file__).parent.parent.parent
+    env_file = root_dir / '.env'
     if env_file.exists():
         load_dotenv(env_file)
         print(f"Loaded .env file from: {env_file}")
+    else:
+        print(f"Warning: .env file not found at {env_file}")
 except ImportError:
     print("Note: python-dotenv not installed. Install with: pip install python-dotenv")
 except Exception as e:
@@ -114,8 +117,7 @@ async def check_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to connect to MongoDB: {e}")
 
-# Global model cache to avoid reloading on every request
-_model_cache = {}
+# Global embedding model cache (lightweight)
 _embedding_model_cache = None
 
 class QueryRequest(BaseModel):
@@ -126,15 +128,15 @@ async def query_llm(request: QueryRequest):
     """Query the LLM with a question - uses RAG to find relevant context and generate answer"""
     try:
         from sentence_transformers import SentenceTransformer
-        from LLM import LLM
+        from core.claude_llm import ClaudeLLM
         
         question = request.question
-        logger.info(f"🔍 DEBUG: Received question: {question}")
+        logger.info(f"DEBUG: Received question: {question}")
         
         # Cache embedding model (lightweight, can stay in memory)
         global _embedding_model_cache
         if _embedding_model_cache is None:
-            logger.debug("📦 Loading embedding model (first time)")
+            logger.debug("Loading embedding model (first time)")
             _embedding_model_cache = SentenceTransformer('all-MiniLM-L6-v2')
         embedding_model = _embedding_model_cache
         
@@ -147,7 +149,7 @@ async def query_llm(request: QueryRequest):
         )
         
         # Query vector database for relevant context
-        logger.debug("🔎 Querying vector database for relevant context...")
+        logger.debug("Querying vector database for relevant context...")
         embedding_collection = mongo_vector_client.get_or_create_collection("training_data_embeddings")
         results = embedding_collection.query(
             query_texts=[question],
@@ -155,7 +157,7 @@ async def query_llm(request: QueryRequest):
         )
         
         # Log retrieved context
-        logger.debug(f"📚 Retrieved {len(results['documents'][0]) if results['documents'] else 0} documents from vector search")
+        logger.debug(f"Retrieved {len(results['documents'][0]) if results['documents'] else 0} documents from vector search")
         if results['documents'] and len(results['documents'][0]) > 0:
             for i, doc in enumerate(results['documents'][0][:3], 1):
                 logger.debug(f"   Document {i} (first 200 chars): {doc[:200]}...")
@@ -164,10 +166,10 @@ async def query_llm(request: QueryRequest):
         context = ""
         if results['documents'] and len(results['documents'][0]) > 0:
             context = "\n\n".join(results['documents'][0][:3])  # Use top 3 documents
-            logger.info(f"📖 DEBUG: Context retrieved ({len(context)} characters)")
-            logger.debug(f"📖 Full context:\n{context[:500]}...")  # Log first 500 chars
+            logger.info(f"DEBUG: Context retrieved ({len(context)} characters)")
+            logger.debug(f"Full context:\n{context[:500]}...")  # Log first 500 chars
         else:
-            logger.warning("⚠️  No relevant context found in database")
+            logger.warning("No relevant context found in database")
             return {
                 "question": question,
                 "answer": "I couldn't find relevant information in the database to answer this question.",
@@ -178,75 +180,35 @@ async def query_llm(request: QueryRequest):
                 }
             }
         
-        # Cache LLM model (heavy, only load once)
-        global _model_cache
-        model_key = "gemma"
+        # Use Claude LLM (fast, lightweight API)
+        logger.info("Generating answer with Claude LLM...")
         
-        if model_key not in _model_cache:
-            # First time: load the model (this will take 30s-2min)
-            logger.info("🤖 Loading LLM model (first time - this will take 30s-2min)...")
-            llm = LLM(
-                user_query=question,
-                pre_trained_model_path="gemma",
-                embeddings_model=embedding_model
-            )
-            llm.load_pretrained_model()
-            _model_cache[model_key] = llm
-            logger.info("✅ LLM model loaded and cached")
-        else:
-            # Reuse cached model
-            logger.debug("♻️  Using cached LLM model")
-            llm = _model_cache[model_key]
-            llm.user_query = question  # Update query for this request
+        claude_llm = ClaudeLLM()
+        claude_llm.user_query = question  # Set the query
         
         # Generate answer using context
-        logger.info("💭 Generating answer with LLM...")
+        answer = await claude_llm.generate_text(context, max_length=500)
         
-        # Build the prompt template to show in debug output
-        PROMPT_TEMPLATE = (
-            "Context:\n{context}\n\n"
-            "Question: \n{query}\n\n"
-        )
-        formatted_prompt = PROMPT_TEMPLATE.format(context=context, query=question)
-        logger.debug(f"📝 Prompt Template:\n{PROMPT_TEMPLATE}")
-        logger.debug(f"📝 Formatted Prompt (first 500 chars):\n{formatted_prompt[:500]}...")
-        
-        answer = llm.generate_text(context, max_length=500)
-        
-        # Clean up the answer - remove "Context:" prefix if present
-        answer_str = str(answer) if answer else "Failed to generate answer"
-        if answer_str.startswith("Context:"):
-            # Extract just the answer part after "Context:"
-            lines = answer_str.split("\n")
-            # Skip the context lines and get the actual answer
-            answer_str = "\n".join([line for line in lines if not line.strip().startswith("Context:") and not line.strip().startswith("Prompt:")])
-            answer_str = answer_str.strip()
-        
-        logger.info(f"✅ DEBUG: Generated answer ({len(answer_str)} characters)")
-        logger.debug(f"💬 Full answer:\n{answer_str}")
+        logger.info(f"DEBUG: Generated answer ({len(answer)} characters)")
+        logger.debug(f"Full answer:\n{answer}")
         
         return {
             "question": question,
-            "answer": answer_str,
+            "answer": answer,
             "context_found": True,
             "sources_used": len(results['documents'][0]) if results['documents'] else 0,
-            "model_cached": model_key in _model_cache,
+            "model_used": "claude-3-sonnet",
             "debug": {
                 "context": context[:1000] if len(context) > 1000 else context,  # Include first 1000 chars of context
                 "context_length": len(context),
                 "sources_used": len(results['documents'][0]) if results['documents'] else 0,
-                "prompt_template": "Context:\\n{context}\\n\\nQuestion: \\n{query}\\n\\n",
-                "prompt_variables": {
-                    "context": f"{len(context)} characters",
-                    "query": question
-                },
-                "formatted_prompt": formatted_prompt[:2000] if len(formatted_prompt) > 2000 else formatted_prompt
+                "persona_detected": claude_llm.detect_user_persona(question) if hasattr(claude_llm, 'detect_user_persona') else "unknown"
             }
         }
     except Exception as e:
         import traceback
         error_msg = f"Failed to query LLM: {e}\n{traceback.format_exc()}"
-        logger.error(f"❌ ERROR: {error_msg}")
+        logger.error(f"ERROR: {error_msg}")
         raise HTTPException(
             status_code=500, 
             detail=error_msg
