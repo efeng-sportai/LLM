@@ -8,7 +8,7 @@ The interface features intelligent persona detection that automatically adapts A
 
 The interface features a sophisticated blue-based color palette with full light and dark mode support, Inter typography with careful attention to spacing and hierarchy, and strategic use of SportAI's brand colors to create an engaging yet professional experience that embodies the brand promise: "The future of fantasy sports" with "Lineups, optimized" to help users "Start winning" through "One platform for everything".
 
-Built with React Native and React Native Web, the application ensures consistent user experience across mobile devices (iOS/Android) and web browsers, while leveraging a FastAPI backend for robust sports AI capabilities.
+Built with React Native and React Native Web, the application ensures consistent user experience across mobile devices (iOS/Android) and web browsers, while leveraging a FastAPI backend for robust sports AI capabilities. The implementation will be developed within the existing `sportai-ui` folder structure, building upon the current React Native foundation.
 
 ### UI Layout Behavior
 
@@ -153,6 +153,7 @@ App
 ### Technology Stack
 - **Frontend Framework**: React Native with TypeScript for cross-platform development
 - **Platform Support**: iOS, Android, and Web (React Native Web)
+- **Project Location**: Development within existing `sportai-ui` folder structure
 - **Backend Architecture**: Microservice architecture with existing FastAPI services (no modifications to LLM/modeling components)
 - **State Management**: React Context API with useReducer for chat state
 - **Styling**: React Native StyleSheet with theme system (compatible across all platforms)
