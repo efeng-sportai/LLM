@@ -4,6 +4,8 @@
 
 The SportAI Chat Interface is a modern cross-platform React Native application that provides users with a premium chat experience for interacting with sports-focused AI capabilities across iOS, Android, and web platforms. The design emphasizes clean aesthetics, intuitive navigation, and seamless performance while maintaining the professional quality found in leading AI chat applications like Kiro, ChatGPT, and Claude.
 
+The interface features intelligent persona detection that automatically adapts AI responses based on user expertise level (newbie, rookie, dabbler, professional), ensuring appropriately tailored advice that matches each user's understanding. Additionally, the system includes a comprehensive feedback mechanism with thumbs up/down ratings that collect training data to continuously improve AI response quality and accuracy.
+
 The interface features a sophisticated blue-based color palette with full light and dark mode support, Inter typography with careful attention to spacing and hierarchy, and strategic use of SportAI's brand colors to create an engaging yet professional experience that embodies the brand promise: "The future of fantasy sports" with "Lineups, optimized" to help users "Start winning" through "One platform for everything".
 
 Built with React Native and React Native Web, the application ensures consistent user experience across mobile devices (iOS/Android) and web browsers, while leveraging a FastAPI backend for robust sports AI capabilities.
@@ -56,33 +58,67 @@ The application supports multiple platforms with consistent functionality:
 
 ### Microservice Architecture
 
-The application follows a microservice architecture pattern:
+The application follows a microservice architecture pattern with current and planned services:
+
+**Current Microservices**:
+- **Sports LLM Service** (Port 5001): Handles AI query processing, RAG, and Claude API integration
+- **Sports Training Data Service** (Port 8000): Manages training data, statistics, and data export
 
 **Frontend Service**:
-- React Native application serving iOS, Android, and Web platforms
-- Independent deployment and scaling
-- Communicates with backend services via REST APIs
+- **React Native Chat Interface**: Cross-platform application serving iOS, Android, and Web
+- **Independent Deployment**: Can be deployed and scaled independently
+- **Microservice Integration**: Communicates with backend services via REST APIs
 
-**Backend Microservices**:
-- **Chat Service**: Handles conversation management, message routing, and chat history
-- **Sports LLM Service**: Existing sports AI processing (no modifications to LLM/modeling)
-- **User Service**: User authentication, preferences, and session management
-- **API Gateway**: Routes requests between frontend and appropriate microservices
+**Future Microservices** (planned for later development):
+- **Chat Service**: Conversation management, message history, and chat persistence
+- **User Service**: Authentication, user profiles, subscription management, and token tracking
+- **API Gateway**: Centralized routing, authentication, and load balancing
+
+**Current Architecture Benefits**:
+- **Service Independence**: Each service can be developed, deployed, and scaled independently
+- **Technology Flexibility**: Each service can use optimal technology stack
+- **Fault Isolation**: Issues in one service don't affect others
+- **Future Extensibility**: Easy to add new services without modifying existing ones
 
 ### Backend Integration Constraints
 
-The frontend will integrate with the existing microservice infrastructure:
+The frontend will integrate with the existing microservice infrastructure while preparing for future services:
 
-- **Preserve Existing LLM**: No modifications to the LLM model, training, or inference logic
-- **Preserve Modeling**: No changes to sports data modeling, vector collections, or AI processing
-- **Service Boundaries**: Clean separation between chat management and AI processing services
-- **API Gateway Integration**: All frontend requests routed through centralized API gateway
-- **Service Communication**: Microservices communicate via REST APIs and message queues
+- **Current Microservices**: Integration with existing Sports LLM Service (port 5001) and Training Data Service (port 8000)
+- **Preserve Existing Services**: No modifications to current LLM model, training, or inference logic
+- **Microservice-Ready Architecture**: Frontend designed to easily integrate additional microservices as they're developed
+- **Service Boundaries**: Clean separation between chat management, AI processing, and data services
+- **Future API Gateway**: Architecture prepared for centralized API gateway when additional services are added
+- **Extensible Communication**: RESTful API patterns that support future microservice additions
 - **Independent Scaling**: Each service can scale independently based on demand
 
 The interface will replace the current basic testing setup with a production-ready solution that showcases the SportAI brand through thoughtful visual design, smooth animations, and responsive interactions optimized for both iOS and Android platforms.
 
 ## Architecture
+
+### Persona Detection and Adaptive Responses
+
+The system implements intelligent persona detection to adapt AI responses based on user expertise level:
+
+**Persona Types**:
+- **Newbie**: Beginner users asking basic questions with terms like "what is", "how do i", "explain"
+- **Rookie**: Casual users asking straightforward questions without advanced terminology
+- **Dabbler**: Analytical users mentioning concepts like "data shows", "trends", "analytics", "stats"
+- **Professional**: Advanced users using fantasy terminology like "leverage", "contrarian", "ownership", "game theory"
+
+**Detection Mechanism**:
+- **Backend Integration**: Leverages existing persona detection in Sports LLM Service via `debug.persona_detected` field
+- **Pattern Recognition**: Analyzes user query patterns and terminology to classify expertise level
+- **Consistency Tracking**: Maintains persona history throughout conversation for consistent responses
+- **Fallback Strategy**: Defaults to "rookie" persona if detection fails or is uncertain
+
+**Response Adaptation**:
+- **Tone Adaptation**: Encouraging (newbie), confident (rookie), analytical (dabbler), sophisticated (professional)
+- **Complexity Scaling**: Simple explanations to advanced metrics based on detected persona
+- **Terminology Matching**: Uses appropriate language complexity for each user type
+- **Consistency Maintenance**: Preserves persona-appropriate style throughout conversation
+
+**Design Rationale**: This approach ensures users receive appropriately tailored advice that matches their understanding level, improving user experience and engagement without requiring manual persona selection.
 
 ### Component Hierarchy
 ```
@@ -99,6 +135,8 @@ App
 │   │   ├── ScrollableMessageHistory (after first message)
 │   │   │   ├── UserMessageBubble (User messages in bubbles)
 │   │   │   ├── AIMessageText (AI responses as plain text)
+│   │   │   │   ├── PersonaIndicator (optional persona detection display)
+│   │   │   │   └── ResponseFeedback (thumbs up/down buttons)
 │   │   │   └── TypingIndicator
 │   │   └── BottomInputArea (after first message)
 │   │       ├── MultilineTextInput (auto-expanding based on content)
@@ -108,6 +146,7 @@ App
 │       ├── SubscriptionInfo
 │       ├── TokenUsage
 │       └── LastUpdated
+├── PersonaDetectionService (handles persona analysis and consistency)
 └── Theme Provider
 ```
 
@@ -192,6 +231,10 @@ interface Message {
   sender: 'user' | 'ai';
   timestamp: Date;
   status: 'sent' | 'delivered' | 'error';
+  persona?: UserPersona; // Detected persona for AI responses
+  personaConfidence?: number; // Confidence in persona detection
+  feedback?: 'positive' | 'negative' | null; // User feedback on AI responses
+  feedbackTimestamp?: Date; // When feedback was provided
 }
 
 interface MessageBubbleProps {
@@ -213,6 +256,22 @@ interface AIMessageTextProps {
   animationSpeed?: number; // Characters per second for fade-in animation
   width: '100%';
   alignment: 'left';
+  showPersonaIndicator?: boolean; // Optional visual indicator of detected persona
+  onFeedback?: (messageId: string, feedback: 'positive' | 'negative') => void;
+}
+
+interface ResponseFeedbackProps {
+  messageId: string;
+  onFeedback: (messageId: string, feedback: 'positive' | 'negative') => void;
+  theme: Theme;
+  feedbackGiven?: 'positive' | 'negative' | null; // Track if feedback already provided
+}
+
+interface PersonaIndicatorProps {
+  persona: UserPersona;
+  confidence: number;
+  theme: Theme;
+  visible: boolean;
 }
 
 interface MessageLayoutProps {
@@ -330,6 +389,18 @@ interface Theme {
     userBubbleText: string; // User message text color
     aiResponseText: string; // AI response plain text color (follows main text color)
     
+    // Persona indicator colors
+    personaNewbie: '#4CAF50'; // Green for encouraging/beginner
+    personaRookie: '#2196F3'; // Blue for confident/casual
+    personaDabbler: '#FF9800'; // Orange for analytical/data-driven
+    personaProfessional: '#9C27B0'; // Purple for sophisticated/advanced
+    
+    // Feedback colors
+    feedbackPositive: '#4CAF50'; // Green for thumbs up
+    feedbackNegative: '#F44336'; // Red for thumbs down
+    feedbackNeutral: '#9E9E9E'; // Gray for inactive feedback buttons
+    feedbackConfirmation: '#2196F3'; // Blue for feedback confirmation
+    
     // Accent Blues (for buttons, highlights, and attention)
     primaryDark: '#1C3E63';
     primary: '#007AFF'; // Main accent color for buttons and highlights
@@ -367,6 +438,85 @@ interface Theme {
 }
 ```
 
+### Persona Detection Service
+```typescript
+interface PersonaDetectionService {
+  detectPersona: (query: string, conversationHistory?: Message[]) => PersonaDetection;
+  validatePersonaConsistency: (newPersona: UserPersona, history: PersonaDetection[]) => boolean;
+  getPersonaAdaptationRules: (persona: UserPersona) => PersonaAdaptationRules;
+}
+
+interface PersonaAdaptationRules {
+  tone: 'encouraging' | 'confident' | 'analytical' | 'sophisticated';
+  complexity: 'simple' | 'straightforward' | 'data-driven' | 'advanced';
+  terminology: 'beginner' | 'casual' | 'analytical' | 'professional';
+  responseLength: 'concise' | 'moderate' | 'detailed' | 'comprehensive';
+}
+
+interface PersonaKeywords {
+  newbie: string[]; // ["what is", "how do i", "explain", "help me understand"]
+  rookie: string[]; // General sports terms without advanced concepts
+  dabbler: string[]; // ["data shows", "trends", "analytics", "stats", "numbers"]
+  professional: string[]; // ["leverage", "contrarian", "ownership", "game theory", "EV"]
+}
+```
+
+### Response Feedback Service
+```typescript
+interface ResponseFeedbackService {
+  submitFeedback: (feedbackData: FeedbackData) => Promise<FeedbackSubmissionResponse>;
+  validateFeedback: (feedbackData: FeedbackData) => FeedbackValidation;
+  getFeedbackHistory: (messageId: string) => FeedbackData | null;
+  prepareFeedbackData: (message: Message, feedback: FeedbackType, context: FeedbackContext) => FeedbackData;
+  
+  // Data quality and spam prevention
+  checkRateLimit: (userId: string) => boolean;
+  detectSpamPatterns: (userId: string, feedbackHistory: FeedbackData[]) => boolean;
+  calculateQualityMetrics: (feedbackData: FeedbackData) => FeedbackQualityMetrics;
+}
+
+interface FeedbackContext {
+  originalQuery: string;
+  conversationHistory: Message[];
+  conversationId?: string;
+  userId?: string;
+  sessionId: string;
+  responseDisplayTime: Date; // When the AI response was first displayed
+  userAgent: string;
+  ipHash: string;
+}
+
+interface FeedbackSubmissionResponse {
+  success: boolean;
+  message: string;
+  feedbackId?: string;
+  validationWarnings?: string[]; // Non-blocking validation issues
+  stored: boolean; // Whether feedback was actually stored (may be rejected due to quality)
+}
+
+interface FeedbackDataSeparation {
+  // Feedback data is stored in separate cluster from training data
+  feedbackCluster: {
+    purpose: 'User feedback collection and quality analysis';
+    isolation: 'Completely separate from AI training data';
+    access: 'Limited to feedback analysis and quality improvement';
+  };
+  
+  trainingDataCluster: {
+    purpose: 'AI model training and improvement';
+    isolation: 'No direct user feedback data';
+    access: 'Only curated, validated data after quality review';
+  };
+  
+  qualityPipeline: {
+    step1: 'Collect raw feedback in feedback cluster';
+    step2: 'Apply validation and quality scoring';
+    step3: 'Human review of flagged feedback';
+    step4: 'Curated data promotion to training cluster (manual process)';
+  };
+}
+```
+
 ## Data Models
 
 ### Chat State Model
@@ -383,6 +533,8 @@ interface ChatState {
   currentChatId?: string;
   subscriptionInfo: SubscriptionInfo;
   user: UserInfo;
+  currentPersona?: UserPersona; // Currently detected user persona
+  personaHistory: PersonaDetection[]; // History of persona detections for consistency
 }
 
 interface UserInfo {
@@ -391,58 +543,198 @@ interface UserInfo {
   subscriptionTier: string;
   isAuthenticated: boolean;
   authToken: string;
+  preferredPersona?: UserPersona; // User's manually set persona preference (optional)
 }
 ```
 
-### Microservice API Integration Model
+### Backend API Integration Model
 ```typescript
-// React Native client interfaces for microservice communication
-interface SportAIRequest {
-  message: string;
-  conversationId?: string;
-  timestamp: Date;
-  userId?: string;
+// React Native client interfaces for current microservice communication
+interface SportAIQueryRequest {
+  question: string;
 }
 
-interface SportAIResponse {
+interface SportAIQueryResponse {
+  question: string;
+  answer: string;
+  context_found: boolean;
+  sources_used: number;
+  model_used: string;
+  debug?: {
+    context: string;
+    context_length: number;
+    sources_used: number;
+    persona_detected: string;
+  };
+}
+
+// User persona types for adaptive AI responses
+type UserPersona = 'newbie' | 'rookie' | 'dabbler' | 'professional';
+type FeedbackType = 'positive' | 'negative';
+
+interface PersonaDetection {
+  detectedPersona: UserPersona;
+  confidence: number; // 0-1 confidence score
+  keyIndicators: string[]; // Terms/patterns that influenced detection
+}
+
+interface PersonaAdaptedResponse {
   response: string;
-  conversationId: string;
+  persona: UserPersona;
+  adaptationApplied: {
+    tone: 'encouraging' | 'confident' | 'analytical' | 'sophisticated';
+    complexity: 'simple' | 'straightforward' | 'data-driven' | 'advanced';
+    terminology: 'beginner' | 'casual' | 'analytical' | 'professional';
+  };
+}
+
+interface FeedbackData {
+  messageId: string;
+  originalQuery: string;
+  aiResponse: string;
+  detectedPersona: UserPersona;
+  personaConfidence: number;
+  userFeedback: FeedbackType;
   timestamp: Date;
-  status: 'success' | 'error';
-  error?: string;
-}
-
-// Microservice API endpoints through API Gateway
-interface APIEndpoints {
-  // Chat Service endpoints
-  chat: '/api/v1/chat/message';
-  conversation: '/api/v1/chat/conversation/{id}';
-  chatHistory: '/api/v1/chat/history';
-  
-  // User Service endpoints
-  userAuth: '/api/v1/user/auth';
-  userPreferences: '/api/v1/user/preferences';
-  subscription: '/api/v1/user/subscription';
-  tokenUsage: '/api/v1/user/tokens';
-  
-  // Sports LLM Service endpoints (existing)
-  sportsQuery: '/api/v1/sports/query';
-  
-  // System endpoints
-  health: '/api/v1/health';
-}
-
-// Service-to-service communication interfaces
-interface ChatServiceRequest {
-  userId: string;
-  message: string;
   conversationId?: string;
+  userId?: string;
+  contextMessages?: string[]; // Previous messages for context
+  
+  // Data validation and quality measures
+  sessionId: string; // Track user session to prevent manipulation
+  responseTime: number; // Time taken to provide feedback (detect rapid clicking)
+  userAgent: string; // Browser/device info for spam detection
+  ipHash: string; // Hashed IP for rate limiting without storing actual IP
+  feedbackSequence: number; // Order of feedback in conversation to detect patterns
 }
 
-interface LLMServiceRequest {
-  query: string;
-  context?: string;
-  userId?: string;
+interface FeedbackValidation {
+  isValid: boolean;
+  reasons: string[]; // Reasons for validation failure
+  riskScore: number; // 0-1 score indicating likelihood of bad data
+  shouldStore: boolean; // Whether to store this feedback
+}
+
+interface FeedbackQualityMetrics {
+  rapidClickDetection: boolean; // Feedback given too quickly after response
+  patternDetection: boolean; // Unusual patterns (all positive/negative)
+  sessionConsistency: boolean; // Consistent with user's session behavior
+  responseRelevance: boolean; // Feedback matches response quality indicators
+}
+
+// Current microservice endpoints (existing services)
+interface CurrentMicroserviceEndpoints {
+  // Sports LLM Service (Port 5001) - existing microservice
+  sportsQuery: 'http://localhost:5001/query';
+  healthCheck: 'http://localhost:5001/check_connection_with_db';
+  embedDocs: 'http://localhost:5001/embed_all_docs';
+  
+  // Sports Training Data Service (Port 8000) - existing microservice
+  trainingData: 'http://localhost:8000/training-data/';
+  trainingStats: 'http://localhost:8000/training-data/stats/overview';
+  healthCheck: 'http://localhost:8000/health';
+  
+  // User Feedback Service (Port 8000) - separate cluster for feedback data
+  userFeedback: 'http://localhost:8000/user-feedback/';
+  feedbackStats: 'http://localhost:8000/user-feedback/stats';
+}
+
+// Chat interface integration with existing microservices
+interface ChatMicroserviceIntegration {
+  // Primary integration with Sports LLM Service
+  llmService: {
+    endpoint: 'http://localhost:5001/query';
+    method: 'POST';
+    requestFormat: SportAIQueryRequest;
+    responseFormat: SportAIQueryResponse;
+    personaDetection: {
+      enabled: true;
+      source: 'debug.persona_detected'; // Field in API response containing detected persona
+      fallbackPersona: 'rookie'; // Default persona if detection fails
+    };
+  };
+  
+  // Feedback service for user feedback collection (separate from training data)
+  feedbackService: {
+    endpoint: 'http://localhost:8000/user-feedback/';
+    method: 'POST';
+    requestFormat: FeedbackData;
+    purpose: 'Collect user feedback in separate cluster for quality analysis';
+    dataValidation: {
+      enabled: true;
+      rateLimiting: '10 feedback submissions per minute per user';
+      duplicateDetection: true;
+      spamPrevention: true;
+    };
+  };
+  
+  // Optional integration with Training Data Service for analytics
+  trainingDataService: {
+    endpoint: 'http://localhost:8000/training-data/stats/overview';
+    method: 'GET';
+    purpose: 'Display usage statistics in footer';
+  };
+  
+  // Client-side state management for MVP (until Chat Service is developed)
+  localStorageKeys: {
+    chatHistory: 'sportai_chat_history';
+    currentConversation: 'sportai_current_conversation';
+    userPreferences: 'sportai_user_preferences';
+    personaHistory: 'sportai_persona_history'; // Track persona detections for consistency
+    userPersonaPreference: 'sportai_user_persona_preference'; // Optional manual persona override
+  };
+}
+
+// Future microservice endpoints (to be developed)
+interface FutureMicroserviceEndpoints {
+  // Chat Service (future microservice)
+  chatService?: {
+    baseUrl: 'http://localhost:8002';
+    endpoints: {
+      createConversation: '/api/v1/conversations';
+      getConversation: '/api/v1/conversations/{id}';
+      listConversations: '/api/v1/conversations';
+      addMessage: '/api/v1/conversations/{id}/messages';
+    };
+  };
+  
+  // User Service (future microservice)
+  userService?: {
+    baseUrl: 'http://localhost:8003';
+    endpoints: {
+      authenticate: '/api/v1/auth/login';
+      getUserProfile: '/api/v1/users/profile';
+      getSubscription: '/api/v1/users/subscription';
+      getTokenUsage: '/api/v1/users/tokens';
+    };
+  };
+  
+  // API Gateway (future infrastructure)
+  apiGateway?: {
+    baseUrl: 'http://localhost:8000';
+    routingPrefix: '/api/v1';
+  };
+}
+
+// Microservice communication interfaces (for future services)
+interface MicroserviceInterfaces {
+  ChatServiceRequest: {
+    userId?: string;
+    message: string;
+    conversationId?: string;
+    timestamp: Date;
+  };
+  
+  UserServiceRequest: {
+    userId: string;
+    action: 'getProfile' | 'getSubscription' | 'getTokens';
+  };
+  
+  LLMServiceRequest: {
+    question: string;
+    userId?: string;
+    conversationId?: string;
+  };
 }
 ```
 ```
@@ -551,6 +843,46 @@ Property 22: Seamless API communication
 Property 23: Sports AI capability consistency
 *For any* user interaction, the system should provide the same sports AI capabilities as the existing testing interface
 **Validates: Requirements 7.4**
+
+Property 24: Persona detection for beginner queries
+*For any* user query containing beginner terminology (e.g., "what is", "how do i", "explain"), the system should detect the "newbie" persona and provide simple explanations with encouraging tone
+**Validates: Requirements 8.1**
+
+Property 25: Persona detection for casual queries
+*For any* user query without advanced terminology, the system should detect the "rookie" persona and provide confident, straightforward advice
+**Validates: Requirements 8.2**
+
+Property 26: Persona detection for analytical queries
+*For any* user query mentioning analytical concepts (e.g., "data shows", "trends", "analytics", "stats"), the system should detect the "dabbler" persona and provide data-driven analysis
+**Validates: Requirements 8.3**
+
+Property 27: Persona detection for advanced queries
+*For any* user query using advanced fantasy terminology (e.g., "leverage", "contrarian", "ownership", "game theory"), the system should detect the "professional" persona and provide sophisticated analysis
+**Validates: Requirements 8.4**
+
+Property 28: Consistent persona-appropriate responses
+*For any* conversation with detected persona, the AI should maintain consistent persona-appropriate language and complexity throughout the conversation
+**Validates: Requirements 8.5**
+
+Property 29: Feedback buttons displayed for AI responses
+*For any* AI response displayed, thumbs up and thumbs down feedback buttons should be visible and accessible
+**Validates: Requirements 9.1**
+
+Property 30: Positive feedback recording with validation
+*For any* thumbs up click on an AI response, the system should record positive feedback, apply quality validation, and send data to the separate feedback cluster
+**Validates: Requirements 9.2**
+
+Property 31: Negative feedback recording with validation
+*For any* thumbs down click on an AI response, the system should record negative feedback, apply quality validation, and send data to the separate feedback cluster
+**Validates: Requirements 9.3**
+
+Property 32: Feedback confirmation display
+*For any* submitted feedback, the system should provide visual confirmation that the feedback was recorded
+**Validates: Requirements 9.4**
+
+Property 33: Comprehensive feedback data collection with quality measures
+*For any* feedback submission, the system should include comprehensive context and apply validation measures to prevent bad data
+**Validates: Requirements 9.5**
 
 ## Error Handling
 
